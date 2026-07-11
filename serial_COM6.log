@@ -1,0 +1,575 @@
+status t=285000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=286000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=287000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=288000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=289000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=290000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=291000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=292000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=293000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=294000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=295000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=296000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=297000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=298000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=299000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=300000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=301000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=302000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=303000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=304000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=305000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18.00
+status t=306000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=307000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=308000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=309000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=310000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=311000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=312000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=313000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=314000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=315000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=316000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=317000 oled=0 imu=0 wai=0x00 stft=-0.15motor stage=7 IDLE left=0.00 right=0.00
+status t=318000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=319000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=320000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=321000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=322000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=323000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=324000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=325000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=326000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=327000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD left=0.18.18
+status toled=0 iage=4 left=0.18 right=0.status t=329000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=330000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=331000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=332000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=333000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=334000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=335000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=336000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=337000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=338000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=339000 oled=0 imu=0 wairight=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=340000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=341000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=342000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=343000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=344000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=345000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=346000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=347000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=348000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=349000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDstatus t=350000 =0x00 stage=7 left=0.00 right=0.00
+status t=351000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=352000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=353000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=354000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=355000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=356000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=357000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=358000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=359000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=360000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=361000 oled=0 imu=0 waift=0.18 right=0.motor stage=5 IDLE left=0.00 right=0.00
+status t=362000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=363000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=364000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=365000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=366000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=367000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=368000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=369000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=370000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=371000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=372000 =0x00 stage=2 left=0.00 right=0.00
+status t=373000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=374000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=375000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=376000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=377000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=378000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=379000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=380000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=381000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=382000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=383000 oled=0 imu=0 waiage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=384000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=385000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=386000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=387000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=388000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=389000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=390000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=391000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=392000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=393000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 rig
+status tmu=0 waift=0.00 status t=395000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=396000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=397000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=398000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=399000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=400000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=401000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=402000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=403000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=404000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=405000 oled=0 imu=0 wai=0x00 stright=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=406000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=407000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=408000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=409000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=410000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=411000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=412000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=413000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=414000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=415000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 rigoled=0 imu=0 wai=0x00 stft=0.00 right=0.00
+status t=417000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=418000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=419000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=420000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=421000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=422000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=423000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=424000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=425000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=426000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=427000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=428000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=429000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=430000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=431000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=432000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=433000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=434000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=435000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=436000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=437000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.0status t=438000 mu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=439000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=440000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=441000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=442000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=443000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=444000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=445000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=446000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=447000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=448000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=449000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=450000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=451000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=452000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=453000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=454000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=455000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=456000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=457000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=458000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=459000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.1mu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=461000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=462000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=463000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=464000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=465000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=466000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=467000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=468000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=469000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=470000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=471000 oled=0 iright=0.18
+motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=472000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=473000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=474000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=475000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=476000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=477000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=478000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=479000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=480000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=481000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+=482000 ft=0.18 right=0.status t=483000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=484000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=485000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=486000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=487000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD left=0.18 right=0.18
+status t=488000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+status t=489000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=490000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=491000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=492000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=493000 motor stage=7 IDLE left=0.00 right=0.00
+status t=494000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+status t=495000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+motor stage=0 IDLE left=0.00 right=0.00
+status t=496000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+status t=497000 oled=0 imu=0 wai=0x00 stage=0 left=0.00 right=0.00
+motor stage=1 LEFT_FWD left=0.18 right=0.00
+status t=498000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+status t=499000 oled=0 imu=0 wai=0x00 stage=1 left=0.18 right=0.00
+motor stage=2 IDLE left=0.00 right=0.00
+status t=500000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+status t=501000 oled=0 imu=0 wai=0x00 stage=2 left=0.00 right=0.00
+motor stage=3 RIGHT_FWD left=0.00 right=0.18
+status t=502000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+status t=503000 oled=0 imu=0 wai=0x00 stage=3 left=0.00 right=0.18
+motor stage=4 BOTH_FWD l=504000 oled=0 imu=0 waift=0.18 status t=505000 oled=0 imu=0 wai=0x00 stage=4 left=0.18 right=0.18
+motor stage=5 IDLE left=0.00 right=0.00
+status t=506000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+status t=507000 oled=0 imu=0 wai=0x00 stage=5 left=0.00 right=0.00
+motor stage=6 BOTH_REV left=-0.15 right=-0.15
+status t=508000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+status t=509000 oled=0 imu=0 wai=0x00 stage=6 left=-0.15 right=-0.15
+motor stage=7 IDLE left=0.00 right=0.00
+status t=510000 oled=0 imu=0 wai=0x00 stage=7 left=0.00 right=0.00
+oled addr=0x3C rnit_ret=-1 fail_idx=4 fail_cmd=0x3F last=-1
+mpu probe=1 ready=0 who_am_i=0x00
+bringup output test=1 stepper_axis=YAW
+bringup test start
+status t=1000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=2000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=3000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=4000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=5000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=6000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=7000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=8000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=9000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=10000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=11000 oled=0 image=1 cmstepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=12000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=13000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=14000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=15000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=16000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=17000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=18000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=19000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=20000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=21000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axisstatus t=22000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0status t=23000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=24000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=25000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=26000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=27000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=28000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=29000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=30000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=31000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=32000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=33000 oled=0 imu=0 wai=s=YAW stage=0 cm
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=34000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=35000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=36000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=37000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=38000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=39000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=40000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=41000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=42000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=43000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cm
+status t=44000 oled=0 imu=0 wai=age=2 cmd=0.0Hz
+status t=45000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=46000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=47000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=48000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=49000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=50000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=51000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=52000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=53000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=54000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=55000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=56000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=57000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=58000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=59000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=60000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=61000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=62000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=63000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=64000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=65000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=66000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=67000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=68000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=69000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=70000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=71000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=72000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=73000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=74000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=75000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=76000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=77000 oled=0 imu=0 wai=stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=78000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=79000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=80000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=81000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=82000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=83000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=84000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=85000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=86000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=87000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hzstatus tled=0 im0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=89000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=90000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=91000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=92000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=93000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=94000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=95000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=96000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=97000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=98000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=99000 oled=0 imu=0 wai=s=YAW std=400.0Hstepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=100000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=101000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=102000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=103000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=104000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=105000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=106000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=107000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=108000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=109000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmdstatus t=110000 oled=0 imu=0 wai=0x00 axmd=-400.0Hz
+status t=111000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=112000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=113000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=114000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=115000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=116000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=117000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=118000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=119000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=120000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=121000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=122000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=123000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=124000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=125000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=126000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=127000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=128000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=129000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=130000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=131000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hzoled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=133000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=134000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=135000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=136000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=137000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=138000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=139000 oled=0 imu=0 waiis=YAW smd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=140000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=141000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=142000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=143000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=144000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=145000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=146000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=147000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=148000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=149000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hstatus t=150000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.status t=151000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=152000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=153000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=154000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=155000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=156000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=157000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=158000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=159000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=160000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=161000 oled=0 imu=0 waistepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=162000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=163000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cmd=0.0Hz
+status t=164000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+status t=165000 oled=0 imu=0 wai=0x00 axis=YAW stage=2 cmd=0.0Hz
+stepper stage=3 REV axis=YAW cmd=-400.0Hz
+status t=166000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+status t=167000 oled=0 imu=0 wai=0x00 axis=YAW stage=3 cmd=-400.0Hz
+stepper stage=0 IDLE axis=YAW cmd=0.0Hz
+status t=168000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+status t=169000 oled=0 imu=0 wai=0x00 axis=YAW stage=0 cmd=0.0Hz
+stepper stage=1 FWD axis=YAW cmd=400.0Hz
+status t=170000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+status t=171000 oled=0 imu=0 wai=0x00 axis=YAW stage=1 cmd=400.0Hz
+stepper stage=2 IDLE axis=YAW cm=172000 oled=0 iis=YAW s

@@ -1,0 +1,150 @@
+#include "bsp/bsp_i2c.h"
+
+#include "ti_msp_dl_config.h"
+
+#define BSP_I2C_TIMEOUT_LOOPS    (50000UL)
+#define BSP_I2C_MAX_BURST        (32U)
+
+static status_t bsp_i2c_wait_idle(void)
+{
+    uint32_t timeout = BSP_I2C_TIMEOUT_LOOPS;
+
+    /* 所有事务都在控制器空闲后再发起，避免前一笔传输尾巴未收干净。 */
+    while ((DL_I2C_getControllerStatus(I2C_SENSOR_BUS_INST) & DL_I2C_CONTROLLER_STATUS_IDLE) == 0U) {
+        if (timeout-- == 0U) {
+            return STATUS_TIMEOUT;
+        }
+    }
+
+    return STATUS_OK;
+}
+
+static status_t bsp_i2c_wait_bus_complete(void)
+{
+    uint32_t timeout = BSP_I2C_TIMEOUT_LOOPS;
+    uint32_t status;
+
+    /* 这里等待总线忙标志释放，再统一检查 error 位。 */
+    while ((DL_I2C_getControllerStatus(I2C_SENSOR_BUS_INST) & DL_I2C_CONTROLLER_STATUS_BUSY_BUS) != 0U) {
+        if (timeout-- == 0U) {
+            return STATUS_TIMEOUT;
+        }
+    }
+
+    status = DL_I2C_getControllerStatus(I2C_SENSOR_BUS_INST);
+    if ((status & DL_I2C_CONTROLLER_STATUS_ERROR) != 0U) {
+        return STATUS_ERROR;
+    }
+
+    return STATUS_OK;
+}
+
+static status_t bsp_i2c_write_raw(uint8_t dev_addr, const uint8_t *data, uint16_t length)
+{
+    status_t ret;
+    uint16_t written;
+
+    ret = bsp_i2c_wait_idle();
+    if (ret != STATUS_OK) {
+        return ret;
+    }
+
+    /* 先灌 FIFO 再发起 start，保持和 TI DriverLib 示例一致。 */
+    if (length == 0U) {
+        DL_I2C_startControllerTransfer(I2C_SENSOR_BUS_INST, dev_addr, DL_I2C_CONTROLLER_DIRECTION_TX, 0U);
+        return bsp_i2c_wait_bus_complete();
+    }
+
+    written = DL_I2C_fillControllerTXFIFO(I2C_SENSOR_BUS_INST, (uint8_t *) data, length);
+    DL_I2C_startControllerTransfer(I2C_SENSOR_BUS_INST, dev_addr, DL_I2C_CONTROLLER_DIRECTION_TX, length);
+
+    while (written < length) {
+        uint32_t timeout = BSP_I2C_TIMEOUT_LOOPS;
+
+        while (DL_I2C_isControllerTXFIFOFull(I2C_SENSOR_BUS_INST)) {
+            if ((DL_I2C_getControllerStatus(I2C_SENSOR_BUS_INST) & DL_I2C_CONTROLLER_STATUS_ERROR) != 0U) {
+                return STATUS_ERROR;
+            }
+            if (timeout-- == 0U) {
+                return STATUS_TIMEOUT;
+            }
+        }
+
+        written += DL_I2C_fillControllerTXFIFO(
+            I2C_SENSOR_BUS_INST,
+            (uint8_t *) &data[written],
+            (uint16_t) (length - written));
+    }
+
+    return bsp_i2c_wait_bus_complete();
+}
+
+void bsp_i2c_init(void)
+{
+}
+
+status_t bsp_i2c_probe(uint8_t dev_addr)
+{
+    uint8_t dummy = 0U;
+    return bsp_i2c_write_raw(dev_addr, &dummy, 0U);
+}
+
+status_t bsp_i2c_write_bytes(uint8_t dev_addr, const uint8_t *data, uint16_t length)
+{
+    if ((data == NULL) || (length == 0U)) {
+        return STATUS_INVALID_ARG;
+    }
+
+    return bsp_i2c_write_raw(dev_addr, data, length);
+}
+
+status_t bsp_i2c_mem_write(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *data, uint16_t length)
+{
+    uint8_t buffer[BSP_I2C_MAX_BURST + 1U];
+
+    if ((data == NULL) || (length > BSP_I2C_MAX_BURST)) {
+        return STATUS_INVALID_ARG;
+    }
+
+    buffer[0] = reg_addr;
+    for (uint16_t i = 0U; i < length; i++) {
+        buffer[i + 1U] = data[i];
+    }
+
+    return bsp_i2c_write_raw(dev_addr, buffer, (uint16_t) (length + 1U));
+}
+
+status_t bsp_i2c_mem_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t *data, uint16_t length)
+{
+    status_t ret;
+    uint16_t i;
+
+    if ((data == NULL) || (length == 0U)) {
+        return STATUS_INVALID_ARG;
+    }
+
+    /* 常见寄存器读流程：先写寄存器地址，再发起读事务。 */
+    ret = bsp_i2c_write_raw(dev_addr, &reg_addr, 1U);
+    if (ret != STATUS_OK) {
+        return ret;
+    }
+
+    ret = bsp_i2c_wait_idle();
+    if (ret != STATUS_OK) {
+        return ret;
+    }
+
+    DL_I2C_startControllerTransfer(I2C_SENSOR_BUS_INST, dev_addr, DL_I2C_CONTROLLER_DIRECTION_RX, length);
+    for (i = 0U; i < length; i++) {
+        uint32_t timeout = BSP_I2C_TIMEOUT_LOOPS;
+        /* 逐字节轮询 RX FIFO，起步阶段先保持阻塞式实现，逻辑更稳。 */
+        while (DL_I2C_isControllerRXFIFOEmpty(I2C_SENSOR_BUS_INST)) {
+            if (timeout-- == 0U) {
+                return STATUS_TIMEOUT;
+            }
+        }
+        data[i] = DL_I2C_receiveControllerData(I2C_SENSOR_BUS_INST);
+    }
+
+    return bsp_i2c_wait_bus_complete();
+}
