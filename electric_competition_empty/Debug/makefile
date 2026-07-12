@@ -22,6 +22,7 @@ ORDERED_OBJS += \
 "./app/app_isr.o" \
 "./app/app_turret.o" \
 "./app/app_ui.o" \
+"./bsp/bsp_adc.o" \
 "./bsp/bsp_gpio.o" \
 "./bsp/bsp_i2c.o" \
 "./bsp/bsp_pwm.o" \
@@ -171,8 +172,8 @@ electric_competition_empty.out: $(OBJS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(GEN_MISC_FILES__QUOTED)$(GEN_FILES__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_ticlang.o" "algo\algo_filter.o" "algo\algo_fusion.o" "algo\algo_pid.o" "app\app_chassis.o" "app\app_control_scheduler.o" "app\app_imu.o" "app\app_isr.o" "app\app_turret.o" "app\app_ui.o" "bsp\bsp_gpio.o" "bsp\bsp_i2c.o" "bsp\bsp_pwm.o" "bsp\bsp_uart.o" "common\ringbuf.o" "common\soft_timer.o" "drivers\drv_encoder_ab.o" "drivers\drv_line_sensor.o" "drivers\drv_motor_dc.o" "drivers\drv_mpu9250.o" "drivers\drv_oled_ssd1306.o" "drivers\drv_stepper.o" "protocol\proto_k230.o" "protocol\proto_vofa_firewater.o" 
-	-$(RM) "empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_ticlang.d" "algo\algo_filter.d" "algo\algo_fusion.d" "algo\algo_pid.d" "app\app_chassis.d" "app\app_control_scheduler.d" "app\app_imu.d" "app\app_isr.d" "app\app_turret.d" "app\app_ui.d" "bsp\bsp_gpio.d" "bsp\bsp_i2c.d" "bsp\bsp_pwm.d" "bsp\bsp_uart.d" "common\ringbuf.d" "common\soft_timer.d" "drivers\drv_encoder_ab.d" "drivers\drv_line_sensor.d" "drivers\drv_motor_dc.d" "drivers\drv_mpu9250.d" "drivers\drv_oled_ssd1306.d" "drivers\drv_stepper.d" "protocol\proto_k230.d" "protocol\proto_vofa_firewater.d" 
+	-$(RM) "empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_ticlang.o" "algo\algo_filter.o" "algo\algo_fusion.o" "algo\algo_pid.o" "app\app_chassis.o" "app\app_control_scheduler.o" "app\app_imu.o" "app\app_isr.o" "app\app_turret.o" "app\app_ui.o" "bsp\bsp_adc.o" "bsp\bsp_gpio.o" "bsp\bsp_i2c.o" "bsp\bsp_pwm.o" "bsp\bsp_uart.o" "common\ringbuf.o" "common\soft_timer.o" "drivers\drv_encoder_ab.o" "drivers\drv_line_sensor.o" "drivers\drv_motor_dc.o" "drivers\drv_mpu9250.o" "drivers\drv_oled_ssd1306.o" "drivers\drv_stepper.o" "protocol\proto_k230.o" "protocol\proto_vofa_firewater.o" 
+	-$(RM) "empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_ticlang.d" "algo\algo_filter.d" "algo\algo_fusion.d" "algo\algo_pid.d" "app\app_chassis.d" "app\app_control_scheduler.d" "app\app_imu.d" "app\app_isr.d" "app\app_turret.d" "app\app_ui.d" "bsp\bsp_adc.d" "bsp\bsp_gpio.d" "bsp\bsp_i2c.d" "bsp\bsp_pwm.d" "bsp\bsp_uart.d" "common\ringbuf.d" "common\soft_timer.d" "drivers\drv_encoder_ab.d" "drivers\drv_line_sensor.d" "drivers\drv_motor_dc.d" "drivers\drv_mpu9250.d" "drivers\drv_oled_ssd1306.d" "drivers\drv_stepper.d" "protocol\proto_k230.d" "protocol\proto_vofa_firewater.d" 
 	-@echo ' '
 
 .PHONY: all clean dependents

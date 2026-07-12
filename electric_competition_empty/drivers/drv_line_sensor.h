@@ -5,12 +5,14 @@
 
 typedef struct {
     bool active_high;
+    uint16_t settle_cycles;
     float weights[8];
 } line_sensor_config_t;
 
 /* line_error 为加权平均后的巡线偏差，line_lost 表示 8 路均未命中 */
 typedef struct {
     line_sensor_config_t cfg;
+    uint8_t raw_state[8];
     uint8_t raw_bits;
     uint8_t hit_count;
     float line_error;

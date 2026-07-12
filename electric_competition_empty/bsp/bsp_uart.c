@@ -8,11 +8,54 @@
 #define K230_RINGBUF_SIZE    (256U)
 #define DEBUG_RX_RINGBUF_SIZE (128U)
 #define DEBUG_PRINTF_BUFFER  (192U)
+#define UART_RX_ERROR_INTERRUPTS (DL_UART_MAIN_INTERRUPT_OVERRUN_ERROR | \
+    DL_UART_MAIN_INTERRUPT_BREAK_ERROR | DL_UART_MAIN_INTERRUPT_PARITY_ERROR | \
+    DL_UART_MAIN_INTERRUPT_FRAMING_ERROR | DL_UART_MAIN_INTERRUPT_RX_TIMEOUT_ERROR | \
+    DL_UART_MAIN_INTERRUPT_NOISE_ERROR)
 
 static uint8_t g_debug_rx_ring_storage[DEBUG_RX_RINGBUF_SIZE];
 static ringbuf_t g_debug_rx_ringbuf;
 static uint8_t g_k230_ring_storage[K230_RINGBUF_SIZE];
 static ringbuf_t g_k230_ringbuf;
+
+static void bsp_uart_service_rx_fifo(UART_Regs *uart, ringbuf_t *ringbuf)
+{
+    while (!DL_UART_Main_isRXFIFOEmpty(uart)) {
+        (void) ringbuf_push_byte(ringbuf, DL_UART_Main_receiveData(uart));
+    }
+}
+
+static void bsp_uart_clear_error_interrupt(UART_Regs *uart, uint32_t iidx)
+{
+    uint32_t clear_mask = 0U;
+
+    switch (iidx) {
+        case (uint32_t) DL_UART_MAIN_IIDX_OVERRUN_ERROR:
+            clear_mask = DL_UART_MAIN_INTERRUPT_OVERRUN_ERROR;
+            break;
+        case (uint32_t) DL_UART_MAIN_IIDX_BREAK_ERROR:
+            clear_mask = DL_UART_MAIN_INTERRUPT_BREAK_ERROR;
+            break;
+        case (uint32_t) DL_UART_MAIN_IIDX_PARITY_ERROR:
+            clear_mask = DL_UART_MAIN_INTERRUPT_PARITY_ERROR;
+            break;
+        case (uint32_t) DL_UART_MAIN_IIDX_FRAMING_ERROR:
+            clear_mask = DL_UART_MAIN_INTERRUPT_FRAMING_ERROR;
+            break;
+        case (uint32_t) DL_UART_MAIN_IIDX_RX_TIMEOUT_ERROR:
+            clear_mask = DL_UART_MAIN_INTERRUPT_RX_TIMEOUT_ERROR;
+            break;
+        case (uint32_t) DL_UART_MAIN_IIDX_NOISE_ERROR:
+            clear_mask = DL_UART_MAIN_INTERRUPT_NOISE_ERROR;
+            break;
+        default:
+            break;
+    }
+
+    if (clear_mask != 0U) {
+        DL_UART_Main_clearInterruptStatus(uart, clear_mask);
+    }
+}
 
 void bsp_uart_init(void)
 {
@@ -22,9 +65,11 @@ void bsp_uart_init(void)
 
 void bsp_uart_enable_irqs(void)
 {
-    DL_UART_Main_enableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_RX);
+    DL_UART_Main_enableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_RX | UART_RX_ERROR_INTERRUPTS);
     NVIC_ClearPendingIRQ(UART_DEBUG_INST_INT_IRQN);
     NVIC_EnableIRQ(UART_DEBUG_INST_INT_IRQN);
+
+    DL_UART_Main_enableInterrupt(UART_K230_INST, UART_RX_ERROR_INTERRUPTS);
 
     NVIC_ClearPendingIRQ(UART_K230_INST_INT_IRQN);
     NVIC_EnableIRQ(UART_K230_INST_INT_IRQN);
@@ -87,13 +132,23 @@ void bsp_uart_debug_irq_handler(void)
 {
     uint32_t iidx;
 
-    iidx = (uint32_t) DL_UART_Main_getPendingInterrupt(UART_DEBUG_INST);
-    if (iidx != (uint32_t) DL_UART_MAIN_IIDX_RX) {
-        return;
-    }
+    while (1) {
+        iidx = (uint32_t) DL_UART_Main_getPendingInterrupt(UART_DEBUG_INST);
+        if (iidx == (uint32_t) DL_UART_MAIN_IIDX_NO_INTERRUPT) {
+            break;
+        }
 
-    while (!DL_UART_Main_isRXFIFOEmpty(UART_DEBUG_INST)) {
-        (void) ringbuf_push_byte(&g_debug_rx_ringbuf, DL_UART_Main_receiveData(UART_DEBUG_INST));
+        if ((iidx == (uint32_t) DL_UART_MAIN_IIDX_RX) ||
+            (iidx == (uint32_t) DL_UART_MAIN_IIDX_RX_TIMEOUT_ERROR)) {
+            if (iidx == (uint32_t) DL_UART_MAIN_IIDX_RX_TIMEOUT_ERROR) {
+                bsp_uart_clear_error_interrupt(UART_DEBUG_INST, iidx);
+            }
+            bsp_uart_service_rx_fifo(UART_DEBUG_INST, &g_debug_rx_ringbuf);
+            continue;
+        }
+
+        bsp_uart_clear_error_interrupt(UART_DEBUG_INST, iidx);
+        bsp_uart_service_rx_fifo(UART_DEBUG_INST, &g_debug_rx_ringbuf);
     }
 }
 
@@ -101,13 +156,23 @@ void bsp_uart_k230_irq_handler(void)
 {
     uint32_t iidx;
 
-    iidx = (uint32_t) DL_UART_Main_getPendingInterrupt(UART_K230_INST);
-    if (iidx != (uint32_t) DL_UART_MAIN_IIDX_RX) {
-        return;
-    }
+    while (1) {
+        iidx = (uint32_t) DL_UART_Main_getPendingInterrupt(UART_K230_INST);
+        if (iidx == (uint32_t) DL_UART_MAIN_IIDX_NO_INTERRUPT) {
+            break;
+        }
 
-    /* IRQ only stages bytes into the ring buffer; frame parsing stays in the main loop. */
-    while (!DL_UART_Main_isRXFIFOEmpty(UART_K230_INST)) {
-        (void) ringbuf_push_byte(&g_k230_ringbuf, DL_UART_Main_receiveData(UART_K230_INST));
+        if ((iidx == (uint32_t) DL_UART_MAIN_IIDX_RX) ||
+            (iidx == (uint32_t) DL_UART_MAIN_IIDX_RX_TIMEOUT_ERROR)) {
+            if (iidx == (uint32_t) DL_UART_MAIN_IIDX_RX_TIMEOUT_ERROR) {
+                bsp_uart_clear_error_interrupt(UART_K230_INST, iidx);
+            }
+            /* IRQ only stages bytes into the ring buffer; frame parsing stays in the main loop. */
+            bsp_uart_service_rx_fifo(UART_K230_INST, &g_k230_ringbuf);
+            continue;
+        }
+
+        bsp_uart_clear_error_interrupt(UART_K230_INST, iidx);
+        bsp_uart_service_rx_fifo(UART_K230_INST, &g_k230_ringbuf);
     }
 }

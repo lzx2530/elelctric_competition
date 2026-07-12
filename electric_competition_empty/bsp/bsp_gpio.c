@@ -89,6 +89,47 @@ void bsp_gpio_set_buzzer(bool on)
     }
 }
 
+void bsp_gpio_init_line_mux(void)
+{
+    DL_GPIO_initDigitalOutput(GPIO_LINE_LINE0_IOMUX);
+    DL_GPIO_initDigitalOutput(GPIO_LINE_LINE1_IOMUX);
+    DL_GPIO_initDigitalOutput(GPIO_TURRET_LASER_EN_IOMUX);
+
+    DL_GPIO_clearPins(GPIO_LINE_LINE0_PORT, GPIO_LINE_LINE0_PIN);
+    DL_GPIO_clearPins(GPIO_LINE_LINE1_PORT, GPIO_LINE_LINE1_PIN);
+    DL_GPIO_clearPins(GPIO_TURRET_PORT, GPIO_TURRET_LASER_EN_PIN);
+
+    DL_GPIO_enableOutput(GPIO_LINE_LINE0_PORT, GPIO_LINE_LINE0_PIN);
+    DL_GPIO_enableOutput(GPIO_LINE_LINE1_PORT, GPIO_LINE_LINE1_PIN);
+    DL_GPIO_enableOutput(GPIO_TURRET_PORT, GPIO_TURRET_LASER_EN_PIN);
+}
+
+void bsp_gpio_set_line_mux_address(uint8_t address)
+{
+    if ((address & 0x01U) != 0U) {
+        DL_GPIO_setPins(GPIO_LINE_LINE0_PORT, GPIO_LINE_LINE0_PIN);
+    } else {
+        DL_GPIO_clearPins(GPIO_LINE_LINE0_PORT, GPIO_LINE_LINE0_PIN);
+    }
+
+    if ((address & 0x02U) != 0U) {
+        DL_GPIO_setPins(GPIO_LINE_LINE1_PORT, GPIO_LINE_LINE1_PIN);
+    } else {
+        DL_GPIO_clearPins(GPIO_LINE_LINE1_PORT, GPIO_LINE_LINE1_PIN);
+    }
+
+    if ((address & 0x04U) != 0U) {
+        DL_GPIO_setPins(GPIO_TURRET_PORT, GPIO_TURRET_LASER_EN_PIN);
+    } else {
+        DL_GPIO_clearPins(GPIO_TURRET_PORT, GPIO_TURRET_LASER_EN_PIN);
+    }
+}
+
+bool bsp_gpio_read_line_mux_out(void)
+{
+    return (DL_GPIO_readPins(GPIO_LINE_LINE6_PORT, GPIO_LINE_LINE6_PIN) != 0U);
+}
+
 uint8_t bsp_gpio_read_line_bits(void)
 {
     uint8_t bits = 0U;

@@ -25,6 +25,7 @@ typedef struct {
 } encoder_driver_t;
 
 void encoder_driver_init(encoder_driver_t *driver, const encoder_config_t *left_cfg, const encoder_config_t *right_cfg);
+void encoder_driver_poll(encoder_driver_t *driver);
 /* 在 GPIO 中断中调用，按端口和 IIDX 分发到左右编码器 */
 void encoder_driver_handle_gpio_interrupt(encoder_driver_t *driver, GPIO_Regs *port, uint32_t pin_iidx);
 /* 在固定周期任务中调用，把累计计数换算成速度 */

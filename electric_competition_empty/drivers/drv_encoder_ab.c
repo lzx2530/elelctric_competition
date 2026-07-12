@@ -45,6 +45,19 @@ void encoder_driver_init(encoder_driver_t *driver, const encoder_config_t *left_
     driver->right.prev_state = encoder_read_state_right();
 }
 
+void encoder_driver_poll(encoder_driver_t *driver)
+{
+    uint8_t left_state = encoder_read_state_left();
+    uint8_t right_state = encoder_read_state_right();
+
+    if (left_state != driver->left.prev_state) {
+        encoder_apply_transition(&driver->left, left_state);
+    }
+    if (right_state != driver->right.prev_state) {
+        encoder_apply_transition(&driver->right, right_state);
+    }
+}
+
 void encoder_driver_handle_gpio_interrupt(encoder_driver_t *driver, GPIO_Regs *port, uint32_t pin_iidx)
 {
     if (port == GPIOB) {

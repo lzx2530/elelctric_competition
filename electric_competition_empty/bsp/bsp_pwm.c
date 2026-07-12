@@ -45,8 +45,10 @@ void bsp_pwm_start_all(void)
 
 void bsp_pwm_set_motor_bridge(bsp_motor_pwm_t motor, float in1_duty, float in2_duty)
 {
-    uint32_t compare_in1 = (uint32_t) (math_clampf(in1_duty, 0.0f, 1.0f) * (float) MOTOR_PWM_PERIOD_COUNTS);
-    uint32_t compare_in2 = (uint32_t) (math_clampf(in2_duty, 0.0f, 1.0f) * (float) MOTOR_PWM_PERIOD_COUNTS);
+    float duty1 = math_clampf(in1_duty, 0.0f, 1.0f);
+    float duty2 = math_clampf(in2_duty, 0.0f, 1.0f);
+    uint32_t compare_in1 = (uint32_t) ((1.0f - duty1) * (float) MOTOR_PWM_PERIOD_COUNTS);
+    uint32_t compare_in2 = (uint32_t) ((1.0f - duty2) * (float) MOTOR_PWM_PERIOD_COUNTS);
 
     switch (motor) {
         case BSP_MOTOR_PWM_LEFT:

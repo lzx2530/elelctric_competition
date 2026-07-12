@@ -35,12 +35,17 @@ void app_chassis_init(void)
         .deadband = 0.02f,
         .max_duty = 0.95f,
     };
-    static const encoder_config_t encoder_cfg = {
+    static const encoder_config_t left_encoder_cfg = {
+        .counts_per_revolution = 780.0f,
+        .invert_direction = true,
+    };
+    static const encoder_config_t right_encoder_cfg = {
         .counts_per_revolution = 780.0f,
         .invert_direction = false,
     };
     static const line_sensor_config_t line_cfg = {
         .active_high = true,
+        .settle_cycles = 1600U,
         .weights = {-3.5f, -2.5f, -1.5f, -0.5f, 0.5f, 1.5f, 2.5f, 3.5f},
     };
     static const pid_config_t speed_pid_cfg = {
@@ -64,7 +69,7 @@ void app_chassis_init(void)
 
     motor_dc_init(&g_chassis.left_motor, &left_motor_cfg);
     motor_dc_init(&g_chassis.right_motor, &right_motor_cfg);
-    encoder_driver_init(&g_chassis.encoder_driver, &encoder_cfg, &encoder_cfg);
+    encoder_driver_init(&g_chassis.encoder_driver, &left_encoder_cfg, &right_encoder_cfg);
     line_sensor_init(&g_chassis.line_sensor, &line_cfg);
     pid_init(&g_chassis.left_speed_pid, &speed_pid_cfg, PID_MODE_POSITION);
     pid_init(&g_chassis.right_speed_pid, &speed_pid_cfg, PID_MODE_POSITION);
@@ -91,6 +96,7 @@ void app_chassis_control_task(float dt_s)
     float left_ref;
     float right_ref;
 
+    encoder_driver_poll(&g_chassis.encoder_driver);
     encoder_driver_update_speed(&g_chassis.encoder_driver, dt_s);
     left_speed = lpf1_update(&g_chassis.left_speed_filter, g_chassis.encoder_driver.left.speed_rps);
     right_speed = lpf1_update(&g_chassis.right_speed_filter, g_chassis.encoder_driver.right.speed_rps);

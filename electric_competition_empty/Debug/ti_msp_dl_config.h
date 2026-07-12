@@ -262,19 +262,19 @@ extern "C" {
 #define GPIO_LINE_LINE7_PORT                                             (GPIOB)
 #define GPIO_LINE_LINE7_PIN                                     (DL_GPIO_PIN_21)
 #define GPIO_LINE_LINE7_IOMUX                                    (IOMUX_PINCM49)
-/* Defines for ENC_L_B: GPIOB.22 with pinCMx 50 on package pin 21 */
+/* Defines for ENC_L_B: GPIOB.1 with pinCMx 13 on package pin 48 */
 #define GPIO_ENCODER_ENC_L_B_PORT                                        (GPIOB)
 // pins affected by this interrupt request:["ENC_L_B","ENC_L_A","ENC_R_A"]
 #define GPIO_ENCODER_GPIOB_INT_IRQN                             (GPIOB_INT_IRQn)
 #define GPIO_ENCODER_GPIOB_INT_IIDX             (DL_INTERRUPT_GROUP1_IIDX_GPIOB)
-#define GPIO_ENCODER_ENC_L_B_IIDX                           (DL_GPIO_IIDX_DIO22)
-#define GPIO_ENCODER_ENC_L_B_PIN                                (DL_GPIO_PIN_22)
-#define GPIO_ENCODER_ENC_L_B_IOMUX                               (IOMUX_PINCM50)
-/* Defines for ENC_L_A: GPIOB.23 with pinCMx 51 on package pin 22 */
+#define GPIO_ENCODER_ENC_L_B_IIDX                            (DL_GPIO_IIDX_DIO1)
+#define GPIO_ENCODER_ENC_L_B_PIN                                 (DL_GPIO_PIN_1)
+#define GPIO_ENCODER_ENC_L_B_IOMUX                               (IOMUX_PINCM13)
+/* Defines for ENC_L_A: GPIOB.20 with pinCMx 48 on package pin 19 */
 #define GPIO_ENCODER_ENC_L_A_PORT                                        (GPIOB)
-#define GPIO_ENCODER_ENC_L_A_IIDX                           (DL_GPIO_IIDX_DIO23)
-#define GPIO_ENCODER_ENC_L_A_PIN                                (DL_GPIO_PIN_23)
-#define GPIO_ENCODER_ENC_L_A_IOMUX                               (IOMUX_PINCM51)
+#define GPIO_ENCODER_ENC_L_A_IIDX                           (DL_GPIO_IIDX_DIO20)
+#define GPIO_ENCODER_ENC_L_A_PIN                                (DL_GPIO_PIN_20)
+#define GPIO_ENCODER_ENC_L_A_IOMUX                               (IOMUX_PINCM48)
 /* Defines for ENC_R_A: GPIOB.24 with pinCMx 52 on package pin 23 */
 #define GPIO_ENCODER_ENC_R_A_PORT                                        (GPIOB)
 #define GPIO_ENCODER_ENC_R_A_IIDX                           (DL_GPIO_IIDX_DIO24)
