@@ -125,7 +125,7 @@ static const char *bringup_test_get_stepper_axis_name(const stepper_handle_t *ha
 
 int main(void)
 {
-    static const app_run_mode_t app_mode = APP_RUN_MODE_BRINGUP_TEST;
+    static const app_run_mode_t app_mode = APP_RUN_MODE_VEHICLE;
 
     if (app_mode == APP_RUN_MODE_BRINGUP_TEST) {
         run_bringup_test();
@@ -143,9 +143,14 @@ static void run_vehicle_app(void)
     k230_parser_t k230_parser;
     ringbuf_t *k230_ringbuf;
     static const proto_vofa_firewater_mode_t vofa_mode = PROTO_VOFA_FIREWATER_MODE_NAMED;
-    static const char *const vofa_names[2] = {
+    static const char *const vofa_names[7] = {
+        "line_error",
+        "line_bits",
+        "line_lost",
         "left_target_rps",
+        "right_target_rps",
         "left_speed_rps",
+        "right_speed_rps",
     };
 
     SYSCFG_DL_init();
@@ -198,14 +203,19 @@ static void run_vehicle_app(void)
             const chassis_snapshot_t *chassis = app_chassis_get_snapshot();
             proto_vofa_firewater_packet_t vofa_packet;
             /* Keep one fixed set of debug variables and switch only the text formatting mode. */
-            float vofa_channels[2] = {
+            float vofa_channels[7] = {
+                chassis->line_error,
+                (float) chassis->line_bits,
+                chassis->line_lost ? 1.0f : 0.0f,
                 chassis->left_target_rps,
+                chassis->right_target_rps,
                 chassis->left_speed_rps,
+                chassis->right_speed_rps,
             };
             vofa_packet.mode = vofa_mode;
             vofa_packet.names = vofa_names;
             vofa_packet.data = vofa_channels;
-            vofa_packet.count = 2U;
+            vofa_packet.count = 7U;
             proto_vofa_firewater_send_packet(&vofa_packet);
             bsp_gpio_toggle_led();
         }
