@@ -36,6 +36,7 @@ app/app_chassis.o: ../app/app_chassis.c \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/sysctl/hw_sysctl_mspm0g1x0x_g3x0x.h \
  D:/ccs/elelctric_competition/electric_competition_empty/algo/algo_filter.h \
  D:/ccs/elelctric_competition/electric_competition_empty/algo/algo_pid.h \
+ D:/ccs/elelctric_competition/electric_competition_empty/common/math_util.h \
  D:/ccs/elelctric_competition/electric_competition_empty/drivers/drv_line_sensor.h \
  D:/ccs/elelctric_competition/electric_competition_empty/drivers/drv_motor_dc.h \
  D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_pwm.h
@@ -74,6 +75,7 @@ D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_s
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/sysctl/hw_sysctl_mspm0g1x0x_g3x0x.h:
 D:/ccs/elelctric_competition/electric_competition_empty/algo/algo_filter.h:
 D:/ccs/elelctric_competition/electric_competition_empty/algo/algo_pid.h:
+D:/ccs/elelctric_competition/electric_competition_empty/common/math_util.h:
 D:/ccs/elelctric_competition/electric_competition_empty/drivers/drv_line_sensor.h:
 D:/ccs/elelctric_competition/electric_competition_empty/drivers/drv_motor_dc.h:
 D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_pwm.h:

@@ -3,6 +3,13 @@
 
 #include "drivers/drv_encoder_ab.h"
 
+typedef enum {
+    APP_LINE_FOLLOW_TRACK = 0U,
+    APP_LINE_FOLLOW_CORNER = 1U,
+    APP_LINE_FOLLOW_LOST = 2U,
+    APP_LINE_FOLLOW_RECOVER = 3U,
+} app_line_follow_state_t;
+
 /* Chassis telemetry snapshot for UI, VOFA+, and debug output. */
 typedef struct {
     float left_speed_rps;
@@ -10,7 +17,10 @@ typedef struct {
     float left_target_rps;
     float right_target_rps;
     float line_error;
+    float line_offset_m;
+    float line_curvature_1pm;
     uint8_t line_bits;
+    app_line_follow_state_t line_state;
     bool line_lost;
     float left_output;
     float right_output;

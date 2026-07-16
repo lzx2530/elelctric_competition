@@ -262,32 +262,28 @@ extern "C" {
 #define GPIO_LINE_LINE7_PORT                                             (GPIOB)
 #define GPIO_LINE_LINE7_PIN                                     (DL_GPIO_PIN_21)
 #define GPIO_LINE_LINE7_IOMUX                                    (IOMUX_PINCM49)
+/* Port definition for Pin Group GPIO_ENCODER */
+#define GPIO_ENCODER_PORT                                                (GPIOB)
+
 /* Defines for ENC_L_B: GPIOB.1 with pinCMx 13 on package pin 48 */
-#define GPIO_ENCODER_ENC_L_B_PORT                                        (GPIOB)
-// pins affected by this interrupt request:["ENC_L_B","ENC_L_A","ENC_R_A"]
-#define GPIO_ENCODER_GPIOB_INT_IRQN                             (GPIOB_INT_IRQn)
-#define GPIO_ENCODER_GPIOB_INT_IIDX             (DL_INTERRUPT_GROUP1_IIDX_GPIOB)
+// pins affected by this interrupt request:["ENC_L_B","ENC_L_A","ENC_R_A","ENC_R_B"]
+#define GPIO_ENCODER_INT_IRQN                                   (GPIOB_INT_IRQn)
+#define GPIO_ENCODER_INT_IIDX                   (DL_INTERRUPT_GROUP1_IIDX_GPIOB)
 #define GPIO_ENCODER_ENC_L_B_IIDX                            (DL_GPIO_IIDX_DIO1)
 #define GPIO_ENCODER_ENC_L_B_PIN                                 (DL_GPIO_PIN_1)
 #define GPIO_ENCODER_ENC_L_B_IOMUX                               (IOMUX_PINCM13)
 /* Defines for ENC_L_A: GPIOB.20 with pinCMx 48 on package pin 19 */
-#define GPIO_ENCODER_ENC_L_A_PORT                                        (GPIOB)
 #define GPIO_ENCODER_ENC_L_A_IIDX                           (DL_GPIO_IIDX_DIO20)
 #define GPIO_ENCODER_ENC_L_A_PIN                                (DL_GPIO_PIN_20)
 #define GPIO_ENCODER_ENC_L_A_IOMUX                               (IOMUX_PINCM48)
 /* Defines for ENC_R_A: GPIOB.24 with pinCMx 52 on package pin 23 */
-#define GPIO_ENCODER_ENC_R_A_PORT                                        (GPIOB)
 #define GPIO_ENCODER_ENC_R_A_IIDX                           (DL_GPIO_IIDX_DIO24)
 #define GPIO_ENCODER_ENC_R_A_PIN                                (DL_GPIO_PIN_24)
 #define GPIO_ENCODER_ENC_R_A_IOMUX                               (IOMUX_PINCM52)
-/* Defines for ENC_R_B: GPIOA.23 with pinCMx 53 on package pin 24 */
-#define GPIO_ENCODER_ENC_R_B_PORT                                        (GPIOA)
-// pins affected by this interrupt request:["ENC_R_B"]
-#define GPIO_ENCODER_GPIOA_INT_IRQN                             (GPIOA_INT_IRQn)
-#define GPIO_ENCODER_GPIOA_INT_IIDX             (DL_INTERRUPT_GROUP1_IIDX_GPIOA)
-#define GPIO_ENCODER_ENC_R_B_IIDX                           (DL_GPIO_IIDX_DIO23)
-#define GPIO_ENCODER_ENC_R_B_PIN                                (DL_GPIO_PIN_23)
-#define GPIO_ENCODER_ENC_R_B_IOMUX                               (IOMUX_PINCM53)
+/* Defines for ENC_R_B: GPIOB.4 with pinCMx 17 on package pin 52 */
+#define GPIO_ENCODER_ENC_R_B_IIDX                            (DL_GPIO_IIDX_DIO4)
+#define GPIO_ENCODER_ENC_R_B_PIN                                 (DL_GPIO_PIN_4)
+#define GPIO_ENCODER_ENC_R_B_IOMUX                               (IOMUX_PINCM17)
 
 
 /* clang-format on */

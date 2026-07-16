@@ -149,20 +149,20 @@ uint8_t bsp_gpio_read_line_bits(void)
 
 bool bsp_gpio_read_encoder_left_a(void)
 {
-    return (DL_GPIO_readPins(GPIO_ENCODER_ENC_L_A_PORT, GPIO_ENCODER_ENC_L_A_PIN) != 0U);
+    return (DL_GPIO_readPins(GPIO_ENCODER_PORT, GPIO_ENCODER_ENC_L_A_PIN) != 0U);
 }
 
 bool bsp_gpio_read_encoder_left_b(void)
 {
-    return (DL_GPIO_readPins(GPIO_ENCODER_ENC_L_B_PORT, GPIO_ENCODER_ENC_L_B_PIN) != 0U);
+    return (DL_GPIO_readPins(GPIO_ENCODER_PORT, GPIO_ENCODER_ENC_L_B_PIN) != 0U);
 }
 
 bool bsp_gpio_read_encoder_right_a(void)
 {
-    return (DL_GPIO_readPins(GPIO_ENCODER_ENC_R_A_PORT, GPIO_ENCODER_ENC_R_A_PIN) != 0U);
+    return (DL_GPIO_readPins(GPIO_ENCODER_PORT, GPIO_ENCODER_ENC_R_A_PIN) != 0U);
 }
 
 bool bsp_gpio_read_encoder_right_b(void)
 {
-    return (DL_GPIO_readPins(GPIO_ENCODER_ENC_R_B_PORT, GPIO_ENCODER_ENC_R_B_PIN) != 0U);
+    return (DL_GPIO_readPins(GPIO_ENCODER_PORT, GPIO_ENCODER_ENC_R_B_PIN) != 0U);
 }

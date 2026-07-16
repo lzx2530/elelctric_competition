@@ -124,7 +124,7 @@ static const char *bringup_test_get_stepper_stage_name(uint8_t stage);
 static const char *bringup_test_get_stepper_axis_name(const stepper_handle_t *handle);
 
 int main(void)
-{
+                                                            {
     static const app_run_mode_t app_mode = APP_RUN_MODE_VEHICLE;
 
     if (app_mode == APP_RUN_MODE_BRINGUP_TEST) {
@@ -143,9 +143,12 @@ static void run_vehicle_app(void)
     k230_parser_t k230_parser;
     ringbuf_t *k230_ringbuf;
     static const proto_vofa_firewater_mode_t vofa_mode = PROTO_VOFA_FIREWATER_MODE_NAMED;
-    static const char *const vofa_names[7] = {
+    static const char *const vofa_names[10] = {
         "line_error",
+        "line_offset_m",
+        "line_curvature_1pm",
         "line_bits",
+        "line_state",
         "line_lost",
         "left_target_rps",
         "right_target_rps",
@@ -172,8 +175,7 @@ static void run_vehicle_app(void)
     app_ui_init();
     app_control_scheduler_init();
 
-    NVIC_EnableIRQ(GPIO_ENCODER_GPIOA_INT_IRQN);
-    NVIC_EnableIRQ(GPIO_ENCODER_GPIOB_INT_IRQN);
+    NVIC_EnableIRQ(GPIO_ENCODER_INT_IRQN);
 
     bsp_uart_debug_printf("system init done\r\n");
 
@@ -203,9 +205,12 @@ static void run_vehicle_app(void)
             const chassis_snapshot_t *chassis = app_chassis_get_snapshot();
             proto_vofa_firewater_packet_t vofa_packet;
             /* Keep one fixed set of debug variables and switch only the text formatting mode. */
-            float vofa_channels[7] = {
+            float vofa_channels[10] = {
                 chassis->line_error,
+                chassis->line_offset_m,
+                chassis->line_curvature_1pm,
                 (float) chassis->line_bits,
+                (float) chassis->line_state,
                 chassis->line_lost ? 1.0f : 0.0f,
                 chassis->left_target_rps,
                 chassis->right_target_rps,
@@ -215,7 +220,7 @@ static void run_vehicle_app(void)
             vofa_packet.mode = vofa_mode;
             vofa_packet.names = vofa_names;
             vofa_packet.data = vofa_channels;
-            vofa_packet.count = 7U;
+            vofa_packet.count = 10U;
             proto_vofa_firewater_send_packet(&vofa_packet);
             bsp_gpio_toggle_led();
         }
@@ -239,8 +244,7 @@ static void run_bringup_test(void)
     app_isr_set_encoder_driver(&g_bringup_test.encoder_driver);
     app_control_scheduler_init();
 
-    NVIC_EnableIRQ(GPIO_ENCODER_GPIOA_INT_IRQN);
-    NVIC_EnableIRQ(GPIO_ENCODER_GPIOB_INT_IRQN);
+    NVIC_EnableIRQ(GPIO_ENCODER_INT_IRQN);
 
     bsp_uart_debug_printf("bringup test start\r\n");
 
@@ -255,11 +259,11 @@ static void bringup_test_init(bringup_test_context_t *ctx)
     static const bringup_output_test_t test_mode = BRINGUP_TEST_MODE_DEFAULT;
     static const encoder_config_t left_encoder_cfg = {
         .counts_per_revolution = 780.0f,
-        .invert_direction = true,
+        .invert_direction = false,
     };
     static const encoder_config_t right_encoder_cfg = {
         .counts_per_revolution = 780.0f,
-        .invert_direction = false,
+        .invert_direction = true,
     };
     static const line_sensor_config_t line_cfg = {
         .active_high = true,
@@ -325,7 +329,7 @@ static void bringup_test_init(bringup_test_context_t *ctx)
     };
     static const motor_dc_config_t right_motor_cfg = {
         .pwm_channel = BSP_MOTOR_PWM_RIGHT,
-        .invert_direction = false,
+        .invert_direction = true,
         .deadband = 0.02f,
         .max_duty = 0.45f,
     };
