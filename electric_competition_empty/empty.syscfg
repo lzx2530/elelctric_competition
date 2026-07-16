@@ -111,7 +111,7 @@ GPIO4.associatedPins[3].$name       = "ENC_R_B";
 GPIO4.associatedPins[3].direction   = "INPUT";
 GPIO4.associatedPins[3].interruptEn = true;
 GPIO4.associatedPins[3].polarity    = "RISE_FALL";
-GPIO4.associatedPins[3].pin.$assign = "PA23";
+GPIO4.associatedPins[3].pin.$assign = "PB4";
 
 GPIO5.$name                               = "GPIO_LED";
 GPIO5.associatedPins[0].$name             = "LED_STATUS";

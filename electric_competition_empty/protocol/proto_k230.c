@@ -1,14 +1,72 @@
 #include "protocol/proto_k230.h"
 
+#include <stdlib.h>
 #include <string.h>
 
-static uint8_t proto_k230_checksum(const uint8_t *data, uint8_t length)
+static bool proto_k230_parse_float_field(const char **cursor, float *value, char delimiter)
 {
-    uint8_t sum = 0U;
-    for (uint8_t i = 0U; i < length; i++) {
-        sum += data[i];
+    char *endptr;
+
+    if (**cursor == '\0') {
+        return false;
     }
-    return sum;
+
+    *value = strtof(*cursor, &endptr);
+    if (endptr == *cursor) {
+        return false;
+    }
+
+    if (delimiter == '\0') {
+        if (*endptr != '\0') {
+            return false;
+        }
+    } else {
+        if (*endptr != delimiter) {
+            return false;
+        }
+        endptr++;
+    }
+
+    *cursor = endptr;
+    return true;
+}
+
+static bool proto_k230_parse_line(const char *line, k230_frame_t *frame)
+{
+    const char *cursor;
+    k230_frame_t parsed = *frame;
+
+    if (strcmp(line, "AIM,SEARCH") == 0) {
+        parsed.valid = false;
+        parsed.dx_cm = 0.0f;
+        parsed.dy_cm = 0.0f;
+        parsed.distance_cm = 0.0f;
+        parsed.angle_deg = 0.0f;
+        *frame = parsed;
+        return true;
+    }
+
+    if (strncmp(line, "AIM,", 4U) != 0) {
+        return false;
+    }
+
+    cursor = line + 4U;
+    if (!proto_k230_parse_float_field(&cursor, &parsed.dx_cm, ',')) {
+        return false;
+    }
+    if (!proto_k230_parse_float_field(&cursor, &parsed.dy_cm, ',')) {
+        return false;
+    }
+    if (!proto_k230_parse_float_field(&cursor, &parsed.distance_cm, ',')) {
+        return false;
+    }
+    if (!proto_k230_parse_float_field(&cursor, &parsed.angle_deg, '\0')) {
+        return false;
+    }
+
+    parsed.valid = true;
+    *frame = parsed;
+    return true;
 }
 
 void proto_k230_init(k230_parser_t *parser)
@@ -21,36 +79,41 @@ bool proto_k230_process_ringbuf(k230_parser_t *parser, ringbuf_t *ringbuf, k230_
     uint8_t byte;
 
     while (ringbuf_pop_byte(ringbuf, &byte)) {
-        /* 先用帧头做同步，丢弃噪声字节。 */
-        if ((parser->index == 0U) && (byte != 0xAAU)) {
-            continue;
-        }
-        if ((parser->index == 1U) && (byte != 0x55U)) {
-            parser->index = 0U;
+        if (byte == '\r') {
             continue;
         }
 
-        parser->raw[parser->index++] = byte;
-        if (parser->index < sizeof(parser->raw)) {
+        if (byte == '\n') {
+            if ((parser->length == 0U) || parser->line_overflow) {
+                parser->length = 0U;
+                parser->line_overflow = false;
+                continue;
+            }
+
+            parser->line[parser->length] = '\0';
+            parser->length = 0U;
+            if (!proto_k230_parse_line(parser->line, &parser->latest_frame)) {
+                continue;
+            }
+
+            parser->latest_frame.frame_count++;
+            if (out_frame != NULL) {
+                *out_frame = parser->latest_frame;
+            }
+            return true;
+        }
+
+        if (parser->line_overflow) {
             continue;
         }
 
-        parser->index = 0U;
-        /* 一帧收满后再统一验和并更新最新结果。 */
-        if (proto_k230_checksum(parser->raw, 7U) != parser->raw[7]) {
+        if (parser->length >= (uint8_t) (K230_LINE_MAX_LENGTH - 1U)) {
+            parser->length = 0U;
+            parser->line_overflow = true;
             continue;
         }
 
-        parser->latest_frame.x_error = (int16_t) ((parser->raw[2] << 8) | parser->raw[3]);
-        parser->latest_frame.y_error = (int16_t) ((parser->raw[4] << 8) | parser->raw[5]);
-        parser->latest_frame.valid = ((parser->raw[6] & 0x01U) != 0U);
-        parser->latest_frame.status = parser->raw[6];
-        parser->latest_frame.frame_count++;
-
-        if (out_frame != NULL) {
-            *out_frame = parser->latest_frame;
-        }
-        return true;
+        parser->line[parser->length++] = (char) byte;
     }
 
     return false;

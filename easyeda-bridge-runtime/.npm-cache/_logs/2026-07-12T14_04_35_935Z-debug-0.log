@@ -1,0 +1,76 @@
+0 verbose cli F:\node.js\node.exe F:\node.js\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.9.0
+2 info using node@v24.14.0
+3 silly config load:file:F:\node.js\node_modules\npm\npmrc
+4 silly config load:file:D:\ccs\elelctric_competition\easyeda-bridge-runtime\.npmrc
+5 silly config load:file:C:\Users\ASUS\.npmrc
+6 silly config load:file:F:\node.js\node_global\etc\npmrc
+7 verbose title npm install
+8 verbose argv "install" "--cache" "D:\\ccs\\elelctric_competition\\easyeda-bridge-runtime\\.npm-cache"
+9 verbose logfile logs-max:10 dir:D:\ccs\elelctric_competition\easyeda-bridge-runtime\.npm-cache\_logs\2026-07-12T14_04_35_935Z-
+10 verbose logfile D:\ccs\elelctric_competition\easyeda-bridge-runtime\.npm-cache\_logs\2026-07-12T14_04_35_935Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+13 silly idealTree buildDeps
+14 silly reify moves {}
+15 silly audit bulk request { ws: [ '8.19.0' ] }
+16 http cache ws@https://registry.npmmirror.com/ws/-/ws-8.19.0.tgz 0ms (cache hit)
+17 silly tarball no local data for ws@https://registry.npmmirror.com/ws/-/ws-8.19.0.tgz. Extracting by manifest.
+18 http fetch GET https://registry.npmmirror.com/npm attempt 1 failed with EACCES
+19 verbose audit error FetchError: request to https://registry.npmmirror.com/-/npm/v1/security/advisories/bulk failed, reason: 
+19 verbose audit error     at ClientRequest.<anonymous> (F:\node.js\node_modules\npm\node_modules\minipass-fetch\lib\index.js:130:14)
+19 verbose audit error     at ClientRequest.emit (node:events:508:28)
+19 verbose audit error     at emitErrorEvent (node:_http_client:108:11)
+19 verbose audit error     at _destroy (node:_http_client:963:9)
+19 verbose audit error     at onSocketNT (node:_http_client:983:5)
+19 verbose audit error     at process.processTicksAndRejections (node:internal/process/task_queues:91:21) {
+19 verbose audit error   code: 'EACCES',
+19 verbose audit error   errno: 'EACCES',
+19 verbose audit error   type: 'system'
+19 verbose audit error }
+20 silly audit error undefined
+21 silly audit report null
+22 http fetch GET https://registry.npmmirror.com/ws/-/ws-8.19.0.tgz attempt 1 failed with EACCES
+23 http fetch GET https://registry.npmmirror.com/npm attempt 2 failed with EACCES
+24 http fetch GET https://registry.npmmirror.com/ws/-/ws-8.19.0.tgz attempt 2 failed with EACCES
+25 http fetch GET https://registry.npmmirror.com/npm attempt 3 failed with EACCES
+26 http fetch GET https://registry.npmmirror.com/ws/-/ws-8.19.0.tgz attempt 3 failed with EACCES
+27 verbose type system
+28 verbose stack FetchError: request to https://registry.npmmirror.com/ws/-/ws-8.19.0.tgz failed, reason: 
+28 verbose stack     at ClientRequest.<anonymous> (F:\node.js\node_modules\npm\node_modules\minipass-fetch\lib\index.js:130:14)
+28 verbose stack     at ClientRequest.emit (node:events:508:28)
+28 verbose stack     at emitErrorEvent (node:_http_client:108:11)
+28 verbose stack     at _destroy (node:_http_client:963:9)
+28 verbose stack     at onSocketNT (node:_http_client:983:5)
+28 verbose stack     at process.processTicksAndRejections (node:internal/process/task_queues:91:21)
+29 error code EACCES
+30 error errno EACCES
+31 error FetchError: request to https://registry.npmmirror.com/ws/-/ws-8.19.0.tgz failed, reason: 
+31 error     at ClientRequest.<anonymous> (F:\node.js\node_modules\npm\node_modules\minipass-fetch\lib\index.js:130:14)
+31 error     at ClientRequest.emit (node:events:508:28)
+31 error     at emitErrorEvent (node:_http_client:108:11)
+31 error     at _destroy (node:_http_client:963:9)
+31 error     at onSocketNT (node:_http_client:983:5)
+31 error     at process.processTicksAndRejections (node:internal/process/task_queues:91:21) {
+31 error   code: 'EACCES',
+31 error   errno: 'EACCES',
+31 error   type: 'system'
+31 error }
+32 error
+32 error The operation was rejected by your operating system.
+32 error It's possible that the file was already in use (by a text editor or antivirus),
+32 error or that you lack permissions to access it.
+32 error
+32 error If you believe this might be a permissions issue, please double-check the
+32 error permissions of the file and its containing directories, or try running
+32 error the command again as root/Administrator.
+33 silly unfinished npm timer reify 1783865076569
+34 silly unfinished npm timer reify:unpack 1783865076609
+35 silly unfinished npm timer reifyNode:node_modules/ws 1783865076609
+36 verbose cwd D:\ccs\elelctric_competition\easyeda-bridge-runtime
+37 verbose os Windows_NT 10.0.26200
+38 verbose node v24.14.0
+39 verbose npm  v11.9.0
+40 verbose exit 1
+41 verbose code 1
+42 error A complete log of this run can be found in: D:\ccs\elelctric_competition\easyeda-bridge-runtime\.npm-cache\_logs\2026-07-12T14_04_35_935Z-debug-0.log

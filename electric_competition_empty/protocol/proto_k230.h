@@ -4,23 +4,26 @@
 #include "common/ringbuf.h"
 #include "common/types.h"
 
+#define K230_LINE_MAX_LENGTH    (80U)
+
 typedef struct {
     bool valid;
-    int16_t x_error;
-    int16_t y_error;
-    uint8_t status;
+    float dx_cm;
+    float dy_cm;
+    float distance_cm;
+    float angle_deg;
     uint32_t frame_count;
 } k230_frame_t;
 
-/* 当前协议假定固定 8 字节帧：帧头 + xy 偏差 + 状态 + 校验 */
 typedef struct {
-    uint8_t raw[8];
-    uint8_t index;
+    char line[K230_LINE_MAX_LENGTH];
+    uint8_t length;
+    bool line_overflow;
     k230_frame_t latest_frame;
 } k230_parser_t;
 
 void proto_k230_init(k230_parser_t *parser);
-/* 从 UART 环形缓冲区持续取字节，解析出完整帧时返回 true */
+/* Consume newline-terminated K230 text messages from UART ring buffer. */
 bool proto_k230_process_ringbuf(k230_parser_t *parser, ringbuf_t *ringbuf, k230_frame_t *out_frame);
 const k230_frame_t *proto_k230_get_latest(const k230_parser_t *parser);
 

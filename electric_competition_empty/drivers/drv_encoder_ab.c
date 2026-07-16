@@ -69,7 +69,7 @@ void encoder_driver_handle_gpio_interrupt(encoder_driver_t *driver, GPIO_Regs *p
         if (pin_iidx == (uint32_t) GPIO_ENCODER_ENC_R_A_IIDX) {
             encoder_apply_transition(&driver->right, encoder_read_state_right());
         }
-    } else if ((port == GPIOA) && (pin_iidx == (uint32_t) GPIO_ENCODER_ENC_R_B_IIDX)) {
+    } else if ((port == GPIOB) && (pin_iidx == (uint32_t) GPIO_ENCODER_ENC_R_B_IIDX)) {
         encoder_apply_transition(&driver->right, encoder_read_state_right());
     }
 }

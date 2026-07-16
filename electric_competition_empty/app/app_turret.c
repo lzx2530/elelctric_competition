@@ -2,7 +2,11 @@
 
 #include "algo/algo_pid.h"
 #include "bsp/bsp_gpio.h"
+#include "common/math_util.h"
 #include "drivers/drv_stepper.h"
+
+#define TURRET_AIM_DEADBAND_CM          (0.20f)
+#define TURRET_TARGET_TIMEOUT_S         (0.20f)
 
 typedef struct {
     stepper_handle_t yaw_stepper;
@@ -10,6 +14,7 @@ typedef struct {
     pid_handle_t yaw_pid;
     pid_handle_t pitch_pid;
     k230_frame_t target;
+    float target_age_s;
     turret_snapshot_t snapshot;
 } turret_app_t;
 
@@ -43,12 +48,12 @@ void app_turret_init(void)
         .integral_separation = 30.0f,
         .derivative_lpf_alpha = 0.15f,
         .setpoint_slew_rate = 0.0f,
-        .deadband = 1.0f,
+        .deadband = 0.0f,
         .derivative_on_measurement = true,
         .enable_integral_separation = true,
         .enable_output_limit = true,
         .enable_integral_limit = true,
-        .enable_deadband = true,
+        .enable_deadband = false,
         .enable_setpoint_ramp = false,
     };
 
@@ -58,26 +63,42 @@ void app_turret_init(void)
     stepper_enable(&g_turret.pitch_stepper, true);
     pid_init(&g_turret.yaw_pid, &turret_pid_cfg, PID_MODE_POSITION);
     pid_init(&g_turret.pitch_pid, &turret_pid_cfg, PID_MODE_POSITION);
+    g_turret.target_age_s = TURRET_TARGET_TIMEOUT_S;
     bsp_gpio_set_laser(false);
 }
 
 void app_turret_set_target(const k230_frame_t *frame)
 {
     g_turret.target = *frame;
+    g_turret.target_age_s = 0.0f;
 }
 
 void app_turret_control_task(float dt_s)
 {
     float yaw_cmd = 0.0f;
     float pitch_cmd = 0.0f;
+    bool target_fresh;
 
-    if (g_turret.target.valid) {
-        /* 视觉链路给的是偏差量，所以这里直接把 0 当目标做误差收敛。 */
-        yaw_cmd = pid_update(&g_turret.yaw_pid, 0.0f, (float) g_turret.target.x_error);
-        pitch_cmd = pid_update(&g_turret.pitch_pid, 0.0f, (float) g_turret.target.y_error);
+    if (g_turret.target_age_s < TURRET_TARGET_TIMEOUT_S) {
+        g_turret.target_age_s += dt_s;
+    }
+    target_fresh = (g_turret.target.valid && (g_turret.target_age_s < TURRET_TARGET_TIMEOUT_S));
+
+    if (target_fresh) {
+        if (math_absf(g_turret.target.dx_cm) > TURRET_AIM_DEADBAND_CM) {
+            yaw_cmd = pid_update(&g_turret.yaw_pid, 0.0f, g_turret.target.dx_cm);
+        } else {
+            pid_reset(&g_turret.yaw_pid);
+        }
+
+        if (math_absf(g_turret.target.dy_cm) > TURRET_AIM_DEADBAND_CM) {
+            pitch_cmd = pid_update(&g_turret.pitch_pid, 0.0f, g_turret.target.dy_cm);
+        } else {
+            pid_reset(&g_turret.pitch_pid);
+        }
+
         bsp_gpio_set_laser(true);
     } else {
-        /* 丢目标时清空 PID 状态，避免目标恢复后沿用旧积分和旧微分。 */
         pid_reset(&g_turret.yaw_pid);
         pid_reset(&g_turret.pitch_pid);
         bsp_gpio_set_laser(false);
@@ -88,9 +109,9 @@ void app_turret_control_task(float dt_s)
     stepper_update(&g_turret.yaw_stepper, dt_s);
     stepper_update(&g_turret.pitch_stepper, dt_s);
 
-    g_turret.snapshot.target_valid = g_turret.target.valid;
-    g_turret.snapshot.x_error = g_turret.target.x_error;
-    g_turret.snapshot.y_error = g_turret.target.y_error;
+    g_turret.snapshot.target_valid = target_fresh;
+    g_turret.snapshot.x_error_cm = g_turret.target.dx_cm;
+    g_turret.snapshot.y_error_cm = g_turret.target.dy_cm;
     g_turret.snapshot.yaw_cmd_hz = yaw_cmd;
     g_turret.snapshot.pitch_cmd_hz = pitch_cmd;
 }
