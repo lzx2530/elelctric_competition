@@ -55,21 +55,23 @@ static const pid_config_t g_speed_pid_cfg = {
     .enable_setpoint_ramp = false,
 };
 
-static const float g_track_speed_rps = 3.0f;
-static const float g_corner_pivot_speed_rps = 4.0f;
-static const float g_lost_speed_rps = 1.0f;
+static const float g_track_speed_rps = 4.5f;
+static const float g_corner_pivot_speed_rps = 3.5f;
+// static const float g_lost_speed_rps = 1.0f;
+static const float g_corner_dash_speed_rps = 2.0f;  // 冲弯（检测到弯道后往前冲一小段）的速度
 static const float g_recover_turn_speed_rps = 2.5f;
-static const float g_recover_inner_speed_rps = 0.0f;
+// static const float g_recover_inner_speed_rps = 0.0f;
 // static const float g_track_line_gain = 0.85f;
 static const float g_line_deadband = 0.10f;
 static const float g_line_error_limit = 2.50f;
 static const uint16_t g_lost_hold_samples = 40U;
-static const uint16_t g_recover_flip_samples = 80U;
-static const uint8_t g_corner_confirm_samples = 3U;
-static const uint8_t g_corner_reacquire_samples = 3U;
+static const uint16_t g_recover_flip_samples = 500U;
+static const uint8_t g_corner_confirm_samples = 2U;
+static const uint8_t g_corner_reacquire_samples = 2U;
+static const uint16_t g_corner_dash_samples = 30U;  //冲弯采样时间
 static const float g_speed_filter_alpha = 0.20f;
-static const float g_track_gain_straight = 0.50f;   // 直道小增益
-static const float g_track_gain_curve = 0.85f;      // 弯道大增益
+static const float g_track_gain_straight = 1.6f;   // 直道小增益
+static const float g_track_gain_curve = 1.8f;      // 弯道大增益
 const float g_dynamic_gain_threshold = 1.5f;
 
 
@@ -128,42 +130,47 @@ static uint8_t chassis_count_bits(uint8_t bits)
     return count;
 }
 
-static bool chassis_bits_are_contiguous(uint8_t bits)
-{
-    if (bits == 0U) {
-        return false;
-    }
-
-    while ((bits & 0x01U) == 0U) {
-        bits >>= 1U;
-    }
-    while ((bits & 0x01U) != 0U) {
-        bits >>= 1U;
-    }
-
-    return bits == 0U;
-}
-
 static int8_t chassis_get_corner_candidate(uint8_t raw_bits)
 {
     uint8_t total_hits = chassis_count_bits(raw_bits);
-    uint8_t left_hits = chassis_count_bits(raw_bits & LINE_SENSOR_LEFT_HALF_MASK);
-    uint8_t right_hits = chassis_count_bits(raw_bits & LINE_SENSOR_RIGHT_HALF_MASK);
 
-    if ((total_hits < 4U) || (total_hits > 6U) || !chassis_bits_are_contiguous(raw_bits)) {
+   // 【补丁】：处理拐弯处粗线导致大量传感器亮灯的情况
+    if (total_hits >= 5U) {
+        bool left_side  = (raw_bits & 0x03U) != 0U;   // 左侧最外侧2个传感器
+        bool right_side = (raw_bits & 0xC0U) != 0U;   // 右侧最外侧2个传感器
+        
+        if (left_side && right_side) {
+            // 左右都压到，可能是非常粗的弯道或暂时性全覆盖
+            // 这里可以选择直行，或者根据之前的方向惯性，但最简单先返回0
+            return 0;
+        }
+        
+        if (left_side)  return -1;   // 左侧压线 → 往左转（跟随左弯）
+        if (right_side) return 1;    // 右侧压线 → 往右转（跟随右弯）
+        
+        // 亮灯很多但没有明显压到两侧，可能是完全压在粗线中间
+        return 0;   // 保持直行
+    }
+
+    if (total_hits < 3U) {
         return 0;
     }
 
-    if (left_hits > right_hits) {
-        return 1;
-    }
-    if (right_hits > left_hits) {
+    uint8_t left_hits = chassis_count_bits(raw_bits & LINE_SENSOR_LEFT_HALF_MASK);
+    uint8_t right_hits = chassis_count_bits(raw_bits & LINE_SENSOR_RIGHT_HALF_MASK);
+    bool touches_left_edge = (raw_bits & 0x01U) != 0U;
+    bool touches_right_edge = (raw_bits & 0x80U) != 0U;
+
+    if (touches_left_edge && (left_hits >= 3U) && (left_hits > right_hits)) {
         return -1;
+    }
+    
+    if (touches_right_edge && (right_hits >= 3U) && (right_hits > left_hits)) {
+        return 1;
     }
 
     return 0;
 }
-
 static int8_t chassis_confirm_corner_candidate(chassis_app_t *chassis, int8_t candidate)
 {
     if (candidate == 0) {
@@ -206,6 +213,7 @@ static bool chassis_corner_complete(chassis_app_t *chassis)
     uint8_t raw_bits = chassis->line_sensor.raw_bits;
 
     if (!chassis->corner_entry_cleared) {
+        // 等待车头完全离开入弯时的横向黑线
         if (!chassis_corner_entry_present(chassis)) {
             chassis->corner_entry_cleared = true;
         }
@@ -213,15 +221,26 @@ static bool chassis_corner_complete(chassis_app_t *chassis)
         return false;
     }
 
-    if ((raw_bits & LINE_SENSOR_CENTER_MASK) != LINE_SENSOR_CENTER_MASK) {
+    // --- 滤除砖缝与噪点干扰的核心逻辑 ---
+    // 1. 中心必须踩到线（只要中间两个有一个亮就行）
+    bool center_hit = (raw_bits & LINE_SENSOR_CENTER_MASK) != 0U;
+    
+    // 2. 最左(bit0)和最右(bit7)的边缘绝对不能踩到线
+    // 真正的中心纵线是不可能让边缘灯亮的，如果边缘亮了，说明是扫过了砖缝或横线
+    bool edge_clear = (raw_bits & 0x81U) == 0U; 
+
+    // 如果中心没对准，或者边缘还在踩脏东西，直接清零稳定计数器
+    if (!center_hit || !edge_clear) {
         chassis->corner_reacquire_count = 0U;
         return false;
     }
 
+    // 只有姿态干净（中心亮且边缘灭），才开始累加稳定度
     if (chassis->corner_reacquire_count < UINT8_MAX) {
         chassis->corner_reacquire_count++;
     }
 
+    // 判断是否达到了稳定样本数要求
     return chassis->corner_reacquire_count >= g_corner_reacquire_samples;
 }
 
@@ -311,28 +330,38 @@ static void chassis_get_wheel_targets(
 
     switch (chassis->line_state) {
         case APP_LINE_FOLLOW_CORNER:
-            if (chassis->corner_bias >= 0.0f) {
-                *left_ref = g_corner_pivot_speed_rps;
-                *right_ref = 0.0f;
-            } else {
-                *left_ref = 0.0f;
-                *right_ref = g_corner_pivot_speed_rps;
+            // 1. 冲弯逻辑
+            if (chassis->line_state_samples < g_corner_dash_samples) {
+                *left_ref = g_corner_dash_speed_rps;
+                *right_ref = g_corner_dash_speed_rps;
+            } 
+            // 2. 原地打转逻辑
+            else {
+                if (chassis->corner_bias > 0.0f) {
+                    // bias > 0 是右转：左轮正转，右轮反转
+                    *left_ref = g_corner_pivot_speed_rps;
+                    *right_ref = -g_corner_pivot_speed_rps; 
+                } else {
+                    // bias < 0 是左转：左轮反转，右轮正转
+                    *left_ref = -g_corner_pivot_speed_rps;  
+                    *right_ref = g_corner_pivot_speed_rps;
+                }
             }
             break;
 
         case APP_LINE_FOLLOW_LOST:
         case APP_LINE_FOLLOW_RECOVER:
-            // 丢线和恢复状态：绝不能直走！根据丢线前的最后一刻误差，原地打转找线
+            // 丢线和恢复状态：原地打转找线
             control_error = chassis->search_bias;
             if (chassis->line_state == APP_LINE_FOLLOW_RECOVER &&
                 chassis->line_state_samples >= g_recover_flip_samples) {
                 control_error = -control_error; // 找太久没找到，反向找
             }
 
-            if (control_error >= 0.0f) { // 丢线前线在右边，原地向右打转
+            if (control_error >= 0.0f) { 
                 *left_ref = g_recover_turn_speed_rps;
                 *right_ref = -g_recover_turn_speed_rps;
-            } else {                     // 丢线前线在左边，原地向左打转
+            } else {                     
                 *left_ref = -g_recover_turn_speed_rps;
                 *right_ref = g_recover_turn_speed_rps;
             }
@@ -354,11 +383,11 @@ static void chassis_get_wheel_targets(
             float current_base_speed;
 
             if (fabsf(control_error) > g_dynamic_gain_threshold) {
-                // 偏离较大：降回基础速度，大增益拉回
-                current_base_speed = g_track_speed_rps - 0.5f;
+                // 偏离较大：主动降速（比原来多降一点以稳住车身），大增益拉回
+                current_base_speed = g_track_speed_rps - 1.0f; 
                 current_gain = g_track_gain_curve;
             } else {
-                // 走得很直：提速，小增益
+                // 走得很直：提速狂奔，小增益
                 current_base_speed = g_track_speed_rps;
                 current_gain = g_track_gain_straight;
             }
@@ -370,9 +399,9 @@ static void chassis_get_wheel_targets(
             break;
     }
 
-    // 安全锁：允许倒转（提供强心向心力），同时限制最高速度防越界
-    *left_ref = math_clampf(*left_ref, -3.0f, 4.5f);
-    *right_ref = math_clampf(*right_ref, -3.0f, 4.5f);
+    // 安全锁：放宽下限，允许 PID 有足够的倒转空间来完成原地旋转
+    *left_ref = math_clampf(*left_ref, -4.5f, 4.5f);
+    *right_ref = math_clampf(*right_ref, -4.5f, 4.5f);
 }
 static float chassis_get_forward_output(pid_handle_t *pid, float target_rps, float speed_rps)
 {
