@@ -124,7 +124,7 @@ static const char *bringup_test_get_stepper_stage_name(uint8_t stage);
 static const char *bringup_test_get_stepper_axis_name(const stepper_handle_t *handle);
 
 int main(void)
-                                                            {
+{
     static const app_run_mode_t app_mode = APP_RUN_MODE_VEHICLE;
 
     if (app_mode == APP_RUN_MODE_BRINGUP_TEST) {

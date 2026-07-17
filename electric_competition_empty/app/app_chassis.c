@@ -37,11 +37,11 @@ static const line_sensor_config_t g_line_sensor_cfg = {
 };
 
 static const pid_config_t g_speed_pid_cfg = {
-    .kp = 0.12f,
+    .kp = 0.10f,//越小越快，待修正
     .ki = 0.40f,
     .kd = 0.001f,
     .dt_s = 0.001f,
-    .output_limit = 1.0f,
+    .output_limit = 1.5f,
     .integral_limit = 0.6f,
     .integral_separation = 3.0f,
     .derivative_lpf_alpha = 0.15f,
@@ -58,8 +58,8 @@ static const pid_config_t g_speed_pid_cfg = {
 static const float g_track_speed_rps = 4.5f;
 static const float g_corner_pivot_speed_rps = 3.5f;
 // static const float g_lost_speed_rps = 1.0f;
-static const float g_corner_dash_speed_rps = 2.0f;  // 冲弯（检测到弯道后往前冲一小段）的速度
-static const float g_recover_turn_speed_rps = 2.5f;
+static const float g_corner_dash_speed_rps = 1.5f;  // 冲弯（检测到弯道后往前冲一小段）的速度
+static const float g_recover_turn_speed_rps = 3.0f;
 // static const float g_recover_inner_speed_rps = 0.0f;
 // static const float g_track_line_gain = 0.85f;
 static const float g_line_deadband = 0.10f;
@@ -68,10 +68,10 @@ static const uint16_t g_lost_hold_samples = 40U;
 static const uint16_t g_recover_flip_samples = 500U;
 static const uint8_t g_corner_confirm_samples = 2U;
 static const uint8_t g_corner_reacquire_samples = 2U;
-static const uint16_t g_corner_dash_samples = 30U;  //冲弯采样时间
+static const uint16_t g_corner_dash_samples = 10U;  //冲弯采样时间
 static const float g_speed_filter_alpha = 0.20f;
-static const float g_track_gain_straight = 1.6f;   // 直道小增益
-static const float g_track_gain_curve = 1.8f;      // 弯道大增益
+static const float g_track_gain_straight = 1.5f;   // 直道小增益
+static const float g_track_gain_curve = 2.2f;      // 弯道大增益
 const float g_dynamic_gain_threshold = 1.5f;
 
 
