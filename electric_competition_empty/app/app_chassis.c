@@ -37,7 +37,7 @@ static const line_sensor_config_t g_line_sensor_cfg = {
 };
 
 static const pid_config_t g_speed_pid_cfg = {
-    .kp = 0.09f,//越小越快，待修正
+    .kp = 0.07f,//越小越快，待修正
     .ki = 0.20f,
     .kd = 0.001f,
     .dt_s = 0.001f,
@@ -55,8 +55,29 @@ static const pid_config_t g_speed_pid_cfg = {
     .enable_setpoint_ramp = false,
 };
 
-static const float g_track_speed_rps = 4.0f;
-static const float g_corner_pivot_speed_rps = 4.0f;
+static const pid_config_t g_line_pid_cfg = {
+    .kp = 1.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .dt_s = 0.005f,
+    .output_limit = 2.4f,
+    .integral_limit = 0.0f,
+    .integral_separation = 0.0f,
+    .derivative_lpf_alpha = 0.0f,
+    .setpoint_slew_rate = 0.0f,
+    .deadband = 0.10f,
+    .derivative_on_measurement = false,
+    .enable_integral_separation = false,
+    .enable_output_limit = true,
+    .enable_integral_limit = false,
+    .enable_deadband = true,
+    .enable_setpoint_ramp = false,
+};
+
+static const float g_track_speed_rps = 5.5f;
+static const float g_track_large_error_speed_rps = 3.0f;
+static const float g_wheel_target_limit_rps = 6.0f;
+static const float g_corner_pivot_speed_rps = 5.0f;
 // static const float g_lost_speed_rps = 1.0f;
 static const float g_corner_dash_speed_rps = 0.1f;  // 冲弯（检测到弯道后往前冲一小段）的速度
 static const float g_recover_turn_speed_rps = 3.0f;
@@ -68,10 +89,8 @@ static const uint16_t g_lost_hold_samples = 40U;
 static const uint16_t g_recover_flip_samples = 500U;
 static const uint8_t g_corner_confirm_samples = 2U;
 static const uint8_t g_corner_reacquire_samples = 2U;
-static const uint16_t g_corner_dash_samples = 1U;  //冲弯采样时间
+static const uint16_t g_corner_dash_samples = 0U;  //冲弯采样时间
 static const float g_speed_filter_alpha = 0.20f;
-static const float g_track_gain_straight = 1.5f;   // 直道小增益
-static const float g_track_gain_curve = 2.4f;      // 弯道大增益
 const float g_dynamic_gain_threshold = 1.5f;
 
 
@@ -85,6 +104,7 @@ typedef struct {
     motor_dc_handle_t right_motor;
     encoder_driver_t encoder_driver;
     line_sensor_handle_t line_sensor;
+    pid_handle_t line_pid;
     pid_handle_t left_speed_pid;
     pid_handle_t right_speed_pid;
     lpf1_handle_t left_speed_filter;
@@ -92,6 +112,7 @@ typedef struct {
     app_line_follow_state_t line_state;
     uint16_t line_state_samples;
     float last_valid_line_error;
+    float line_turn_adjustment;
     float search_bias;
     float corner_bias;
     int8_t pending_corner_direction;
@@ -253,6 +274,11 @@ static void chassis_enter_state(chassis_app_t *chassis, app_line_follow_state_t 
 {
     chassis->line_state = state;
     chassis->line_state_samples = 0U;
+
+    if (state == APP_LINE_FOLLOW_TRACK) {
+        pid_reset(&chassis->line_pid);
+        chassis->line_turn_adjustment = 0.0f;
+    }
 }
 
 static void chassis_update_line_state(chassis_app_t *chassis)
@@ -321,6 +347,20 @@ static void chassis_update_line_state(chassis_app_t *chassis)
     }
 }
 
+static void chassis_update_track_turn_adjustment(chassis_app_t *chassis)
+{
+    float control_error;
+
+    if (chassis->line_state != APP_LINE_FOLLOW_TRACK) {
+        return;
+    }
+
+    control_error = chassis_get_control_error(chassis->line_sensor.line_error);
+    control_error = math_clampf(control_error, -g_line_error_limit, g_line_error_limit);
+    /* Runs at the 5 ms line-sensor rate; the 1 kHz speed loop uses the cached result. */
+    chassis->line_turn_adjustment = pid_update(&chassis->line_pid, control_error, 0.0f);
+}
+
 static void chassis_get_wheel_targets(
     const chassis_app_t *chassis,
     float *left_ref,
@@ -378,30 +418,27 @@ static void chassis_get_wheel_targets(
                 control_error = 0.0f;
             }
 
-            // 3. 动态增益与速度分配
-            float current_gain;
+            // 3. 动态降速
             float current_base_speed;
 
             if (fabsf(control_error) > g_dynamic_gain_threshold) {
                 // 偏离较大：主动降速（比原来多降一点以稳住车身），大增益拉回
-                current_base_speed = g_track_speed_rps - 1.0f; 
-                current_gain = g_track_gain_curve;
+                current_base_speed = g_track_large_error_speed_rps;
             } else {
                 // 走得很直：提速狂奔，小增益
                 current_base_speed = g_track_speed_rps;
-                current_gain = g_track_gain_straight;
             }
 
             // 4. 计算最终参考速度
-            float turn_adjustment = current_gain * control_error;
+            float turn_adjustment = chassis->line_turn_adjustment;
             *left_ref = current_base_speed + turn_adjustment;
             *right_ref = current_base_speed - turn_adjustment;
             break;
     }
 
     // 安全锁：放宽下限，允许 PID 有足够的倒转空间来完成原地旋转
-    *left_ref = math_clampf(*left_ref, -4.5f, 4.5f);
-    *right_ref = math_clampf(*right_ref, -4.5f, 4.5f);
+    *left_ref = math_clampf(*left_ref, -g_wheel_target_limit_rps, g_wheel_target_limit_rps);
+    *right_ref = math_clampf(*right_ref, -g_wheel_target_limit_rps, g_wheel_target_limit_rps);
 }
 static float chassis_get_forward_output(pid_handle_t *pid, float target_rps, float speed_rps)
 {
@@ -419,6 +456,7 @@ void app_chassis_init(void)
     motor_dc_init(&g_chassis.right_motor, &g_right_motor_cfg);
     encoder_driver_init(&g_chassis.encoder_driver, &g_left_encoder_cfg, &g_right_encoder_cfg);
     line_sensor_init(&g_chassis.line_sensor, &g_line_sensor_cfg);
+    pid_init(&g_chassis.line_pid, &g_line_pid_cfg, PID_MODE_POSITION);
     pid_init(&g_chassis.left_speed_pid, &g_speed_pid_cfg, PID_MODE_POSITION);
     pid_init(&g_chassis.right_speed_pid, &g_speed_pid_cfg, PID_MODE_POSITION);
     lpf1_init(&g_chassis.left_speed_filter, g_speed_filter_alpha, 0.0f);
@@ -427,6 +465,7 @@ void app_chassis_init(void)
     g_chassis.line_state = APP_LINE_FOLLOW_TRACK;
     g_chassis.line_state_samples = 0U;
     g_chassis.last_valid_line_error = 0.0f;
+    g_chassis.line_turn_adjustment = 0.0f;
     g_chassis.search_bias = 0.0f;
     g_chassis.corner_bias = 1.0f;
     g_chassis.pending_corner_direction = 0;
@@ -441,6 +480,7 @@ void app_chassis_line_task(void)
     /* Update line position at 5 ms so mux settling jitter stays out of the 1 kHz speed loop. */
     line_sensor_update(&g_chassis.line_sensor);
     chassis_update_line_state(&g_chassis);
+    chassis_update_track_turn_adjustment(&g_chassis);
     g_chassis.snapshot.line_bits = g_chassis.line_sensor.raw_bits;
     g_chassis.snapshot.line_error = g_chassis.line_sensor.line_error;
     g_chassis.snapshot.line_state = g_chassis.line_state;

@@ -145,8 +145,6 @@ static void run_vehicle_app(void)
     static const proto_vofa_firewater_mode_t vofa_mode = PROTO_VOFA_FIREWATER_MODE_NAMED;
     static const char *const vofa_names[10] = {
         "line_error",
-        "line_offset_m",
-        "line_curvature_1pm",
         "line_bits",
         "line_state",
         "line_lost",
@@ -154,6 +152,8 @@ static void run_vehicle_app(void)
         "right_target_rps",
         "left_speed_rps",
         "right_speed_rps",
+        "left_output",
+        "right_output",
     };
 
     SYSCFG_DL_init();
@@ -207,8 +207,6 @@ static void run_vehicle_app(void)
             /* Keep one fixed set of debug variables and switch only the text formatting mode. */
             float vofa_channels[10] = {
                 chassis->line_error,
-                chassis->line_offset_m,
-                chassis->line_curvature_1pm,
                 (float) chassis->line_bits,
                 (float) chassis->line_state,
                 chassis->line_lost ? 1.0f : 0.0f,
@@ -216,6 +214,8 @@ static void run_vehicle_app(void)
                 chassis->right_target_rps,
                 chassis->left_speed_rps,
                 chassis->right_speed_rps,
+                chassis->left_output,
+                chassis->right_output,
             };
             vofa_packet.mode = vofa_mode;
             vofa_packet.names = vofa_names;
