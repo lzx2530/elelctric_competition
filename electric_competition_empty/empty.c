@@ -140,6 +140,7 @@ int main(void)
 static void run_vehicle_app(void)
 {
     scheduler_flags_t scheduler_flags;
+    uint32_t last_chassis_control_tick_ms = 0U;
     k230_parser_t k230_parser;
     ringbuf_t *k230_ringbuf;
     static const proto_vofa_firewater_mode_t vofa_mode = PROTO_VOFA_FIREWATER_MODE_NAMED;
@@ -195,7 +196,12 @@ static void run_vehicle_app(void)
             app_imu_task();
         }
         if (scheduler_flags.control_1khz) {
-            app_chassis_control_task(0.001f);
+            uint32_t elapsed_ms = scheduler_flags.tick_ms - last_chassis_control_tick_ms;
+            float chassis_elapsed_s;
+
+            last_chassis_control_tick_ms = scheduler_flags.tick_ms;
+            chassis_elapsed_s = 0.001f * (float) elapsed_ms;
+            app_chassis_control_task(0.001f, chassis_elapsed_s);
             app_turret_control_task(0.001f);
         }
         if (scheduler_flags.oled_50ms) {

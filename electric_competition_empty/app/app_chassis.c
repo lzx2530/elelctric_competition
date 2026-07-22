@@ -77,10 +77,16 @@ static const pid_config_t g_line_pid_cfg = {
 static const float g_track_speed_rps = 5.5f;
 static const float g_track_large_error_speed_rps = 3.0f;
 static const float g_wheel_target_limit_rps = 6.0f;
-static const float g_corner_pivot_speed_rps = 5.0f;
+static const float g_corner_pivot_speed_rps = 1.0f;
 // static const float g_lost_speed_rps = 1.0f;
-static const float g_corner_dash_speed_rps = 0.1f;  // 冲弯（检测到弯道后往前冲一小段）的速度
-static const float g_recover_turn_speed_rps = 3.0f;
+static const uint8_t g_corner_stop_confirm_samples = 20U;
+static const float g_corner_dash_speed_rps = 2.5f;
+static const uint16_t g_corner_dash_samples = 80U;
+static const float g_corner_stop_speed_threshold_rps = 0.15f;
+static const float g_wheel_track_m = 0.120f;
+static const float g_wheel_diameter_m = 0.065f;
+static const float g_corner_pivot_pause_s = 0.5f;
+static const float g_recover_turn_speed_rps = 1.0f;
 // static const float g_recover_inner_speed_rps = 0.0f;
 // static const float g_track_line_gain = 0.85f;
 static const float g_line_deadband = 0.10f;
@@ -89,7 +95,6 @@ static const uint16_t g_lost_hold_samples = 40U;
 static const uint16_t g_recover_flip_samples = 500U;
 static const uint8_t g_corner_confirm_samples = 2U;
 static const uint8_t g_corner_reacquire_samples = 2U;
-static const uint16_t g_corner_dash_samples = 0U;  //冲弯采样时间
 static const float g_speed_filter_alpha = 0.20f;
 const float g_dynamic_gain_threshold = 1.5f;
 
@@ -117,6 +122,11 @@ typedef struct {
     float corner_bias;
     int8_t pending_corner_direction;
     uint8_t corner_confirm_count;
+    uint8_t corner_stop_confirm_count;
+    int32_t corner_pivot_left_start_count;
+    int32_t corner_pivot_right_start_count;
+    bool corner_pivot_angle_ready;
+    float corner_pivot_pause_elapsed_s;
     bool corner_entry_cleared;
     uint8_t corner_reacquire_count;
     uint8_t center_history;
@@ -242,16 +252,22 @@ static bool chassis_corner_complete(chassis_app_t *chassis)
         return false;
     }
 
+    if (!chassis->corner_pivot_angle_ready) {
+        chassis->corner_reacquire_count = 0U;
+        return false;
+    }
+
     // --- 滤除砖缝与噪点干扰的核心逻辑 ---
     // 1. 中心必须踩到线（只要中间两个有一个亮就行）
     bool center_hit = (raw_bits & LINE_SENSOR_CENTER_MASK) != 0U;
     
     // 2. 最左(bit0)和最右(bit7)的边缘绝对不能踩到线
     // 真正的中心纵线是不可能让边缘灯亮的，如果边缘亮了，说明是扫过了砖缝或横线
+    uint8_t right_hits = chassis_count_bits(raw_bits & LINE_SENSOR_RIGHT_HALF_MASK);
     bool edge_clear = (raw_bits & 0x81U) == 0U; 
 
     // 如果中心没对准，或者边缘还在踩脏东西，直接清零稳定计数器
-    if (!center_hit || !edge_clear) {
+    if ((!center_hit || !edge_clear) && (right_hits < 2U)) {
         chassis->corner_reacquire_count = 0U;
         return false;
     }
@@ -262,7 +278,8 @@ static bool chassis_corner_complete(chassis_app_t *chassis)
     }
 
     // 判断是否达到了稳定样本数要求
-    return chassis->corner_reacquire_count >= g_corner_reacquire_samples;
+    return (chassis->corner_pivot_pause_elapsed_s >= g_corner_pivot_pause_s) &&
+        (chassis->corner_reacquire_count >= g_corner_reacquire_samples);
 }
 
 static bool chassis_center_reacquired(const chassis_app_t *chassis)
@@ -279,6 +296,72 @@ static void chassis_enter_state(chassis_app_t *chassis, app_line_follow_state_t 
         pid_reset(&chassis->line_pid);
         chassis->line_turn_adjustment = 0.0f;
     }
+}
+
+static void chassis_update_corner_stop_state(
+    chassis_app_t *chassis,
+    float left_speed_rps,
+    float right_speed_rps)
+{
+    if ((chassis->line_state != APP_LINE_FOLLOW_CORNER) ||
+        (chassis->line_state_samples < g_corner_dash_samples)) {
+        return;
+    }
+
+    if (chassis->corner_stop_confirm_count >= g_corner_stop_confirm_samples) {
+        return;
+    }
+
+    if ((math_absf(left_speed_rps) <= g_corner_stop_speed_threshold_rps) &&
+        (math_absf(right_speed_rps) <= g_corner_stop_speed_threshold_rps)) {
+        if (chassis->corner_stop_confirm_count < UINT8_MAX) {
+            chassis->corner_stop_confirm_count++;
+        }
+    } else {
+        chassis->corner_stop_confirm_count = 0U;
+    }
+
+    if (chassis->corner_stop_confirm_count == g_corner_stop_confirm_samples) {
+        chassis->corner_pivot_left_start_count = chassis->encoder_driver.left.count;
+        chassis->corner_pivot_right_start_count = chassis->encoder_driver.right.count;
+    }
+}
+
+static void chassis_update_corner_pivot_angle(chassis_app_t *chassis)
+{
+    float left_turns;
+    float right_turns;
+    float required_turns;
+
+    if ((chassis->line_state != APP_LINE_FOLLOW_CORNER) ||
+        (chassis->corner_stop_confirm_count < g_corner_stop_confirm_samples) ||
+        chassis->corner_pivot_angle_ready) {
+        return;
+    }
+
+    left_turns = math_absf((float) (chassis->encoder_driver.left.count -
+        chassis->corner_pivot_left_start_count)) /
+        chassis->encoder_driver.left.cfg.counts_per_revolution;
+    right_turns = math_absf((float) (chassis->encoder_driver.right.count -
+        chassis->corner_pivot_right_start_count)) /
+        chassis->encoder_driver.right.cfg.counts_per_revolution;
+    required_turns = g_wheel_track_m / (4.0f * g_wheel_diameter_m);
+
+    if (((left_turns + right_turns) * 0.5f) >= required_turns) {
+        chassis->corner_pivot_angle_ready = true;
+        chassis->corner_pivot_pause_elapsed_s = 0.0f;
+    }
+}
+
+static void chassis_update_corner_pivot_pause(chassis_app_t *chassis, float dt_s)
+{
+    if ((chassis->line_state != APP_LINE_FOLLOW_CORNER) ||
+        !chassis->corner_pivot_angle_ready ||
+        (chassis->corner_pivot_pause_elapsed_s >= g_corner_pivot_pause_s)) {
+        return;
+    }
+
+    chassis->corner_pivot_pause_elapsed_s += dt_s;
 }
 
 static void chassis_update_line_state(chassis_app_t *chassis)
@@ -327,6 +410,11 @@ static void chassis_update_line_state(chassis_app_t *chassis)
             if (corner_candidate != 0) {
                 chassis->corner_bias = (float) corner_candidate;
                 chassis->search_bias = (float) corner_candidate;
+                chassis->corner_stop_confirm_count = 0U;
+                chassis->corner_pivot_left_start_count = 0;
+                chassis->corner_pivot_right_start_count = 0;
+                chassis->corner_pivot_angle_ready = false;
+                chassis->corner_pivot_pause_elapsed_s = 0.0f;
                 chassis->corner_entry_cleared = false;
                 chassis->corner_reacquire_count = 0U;
                 chassis->center_history = 0U;
@@ -370,10 +458,20 @@ static void chassis_get_wheel_targets(
 
     switch (chassis->line_state) {
         case APP_LINE_FOLLOW_CORNER:
-            // 1. 冲弯逻辑
             if (chassis->line_state_samples < g_corner_dash_samples) {
                 *left_ref = g_corner_dash_speed_rps;
                 *right_ref = g_corner_dash_speed_rps;
+            } else if (chassis->corner_stop_confirm_count < g_corner_stop_confirm_samples) {
+                *left_ref = 0.0f;
+                *right_ref = 0.0f;
+            } else if (chassis->corner_pivot_angle_ready) {
+                *left_ref = 0.0f;
+                *right_ref = 0.0f;
+            } else {
+            // 1. 冲弯逻辑
+            if (chassis->corner_bias > 0.0f) {
+                *left_ref = -g_corner_pivot_speed_rps;
+                *right_ref = g_corner_pivot_speed_rps;
             } 
             // 2. 原地打转逻辑
             else {
@@ -383,9 +481,10 @@ static void chassis_get_wheel_targets(
                     *right_ref = -g_corner_pivot_speed_rps; 
                 } else {
                     // bias < 0 是左转：左轮反转，右轮正转
-                    *left_ref = -g_corner_pivot_speed_rps;  
-                    *right_ref = g_corner_pivot_speed_rps;
+                    *left_ref = g_corner_pivot_speed_rps;
+                    *right_ref = -g_corner_pivot_speed_rps;
                 }
+            }
             }
             break;
 
@@ -470,6 +569,11 @@ void app_chassis_init(void)
     g_chassis.corner_bias = 1.0f;
     g_chassis.pending_corner_direction = 0;
     g_chassis.corner_confirm_count = 0U;
+    g_chassis.corner_stop_confirm_count = 0U;
+    g_chassis.corner_pivot_left_start_count = 0;
+    g_chassis.corner_pivot_right_start_count = 0;
+    g_chassis.corner_pivot_angle_ready = false;
+    g_chassis.corner_pivot_pause_elapsed_s = 0.0f;
     g_chassis.corner_entry_cleared = false;
     g_chassis.corner_reacquire_count = 0U;
     g_chassis.center_history = 0U;
@@ -487,7 +591,7 @@ void app_chassis_line_task(void)
     g_chassis.snapshot.line_lost = g_chassis.line_sensor.line_lost;
 }
 
-void app_chassis_control_task(float dt_s)
+void app_chassis_control_task(float control_dt_s, float elapsed_s)
 {
     float left_speed;
     float right_speed;
@@ -496,9 +600,12 @@ void app_chassis_control_task(float dt_s)
     float line_error;
 
     // encoder_driver_poll(&g_chassis.encoder_driver);
-    encoder_driver_update_speed(&g_chassis.encoder_driver, dt_s);
+    encoder_driver_update_speed(&g_chassis.encoder_driver, control_dt_s);
     left_speed = lpf1_update(&g_chassis.left_speed_filter, g_chassis.encoder_driver.left.speed_rps);
     right_speed = lpf1_update(&g_chassis.right_speed_filter, g_chassis.encoder_driver.right.speed_rps);
+    chassis_update_corner_stop_state(&g_chassis, left_speed, right_speed);
+    chassis_update_corner_pivot_angle(&g_chassis);
+    chassis_update_corner_pivot_pause(&g_chassis, elapsed_s);
 
     line_error = g_chassis.line_sensor.line_error;
     chassis_get_wheel_targets(&g_chassis, &left_ref, &right_ref);

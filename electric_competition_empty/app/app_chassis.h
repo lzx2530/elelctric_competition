@@ -30,7 +30,7 @@ void app_chassis_init(void);
 /* Low-rate task: read grayscale sensors and update line offset. */
 void app_chassis_line_task(void);
 /* High-rate task: update wheel speed estimates and run left/right speed loops. */
-void app_chassis_control_task(float dt_s);
+void app_chassis_control_task(float control_dt_s, float elapsed_s);
 const chassis_snapshot_t *app_chassis_get_snapshot(void);
 encoder_driver_t *app_chassis_get_encoder_driver(void);
 
