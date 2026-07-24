@@ -17,6 +17,11 @@ void app_imu_init(void)
         .dt_s = 0.01f,
         .accel_weight = 0.02f,
         .yaw_correction_weight = 0.0f,
+        .gyro_filter_alpha = 0.35f,
+        .enable_yaw_stationary_lock = true,
+        .yaw_rotate_enter_dps = 3.0f,
+        .yaw_stationary_enter_dps = 1.5f,
+        .yaw_bias_alpha = 0.02f,
     };
 
     fusion6_init(&g_imu.fusion, &fusion_cfg);
@@ -54,6 +59,8 @@ void app_imu_task(void)
     g_imu.snapshot.pitch_deg = g_imu.fusion.pitch_deg;
     g_imu.snapshot.yaw_deg = g_imu.fusion.yaw_deg;
     g_imu.snapshot.gyro_z_dps = g_imu.imu.gyro_dps.z;
+    g_imu.snapshot.yaw_gyro_bias_dps = g_imu.fusion.yaw_gyro_bias_dps;
+    g_imu.snapshot.yaw_rotating = g_imu.fusion.yaw_rotating;
 }
 
 const imu_snapshot_t *app_imu_get_snapshot(void)

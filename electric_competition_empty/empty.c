@@ -102,9 +102,10 @@ typedef enum {
     BRINGUP_OUTPUT_TEST_IMU = 3,
 } bringup_output_test_t;
 
-#define BRINGUP_TEST_MODE_DEFAULT    BRINGUP_OUTPUT_TEST_DC_MOTOR
-#define BRINGUP_IMU_TEXT_LOG_ENABLE  (0U)
+#define BRINGUP_TEST_MODE_DEFAULT    BRINGUP_OUTPUT_TEST_IMU
+#define BRINGUP_IMU_TEXT_LOG_ENABLE  (1U)
 #define BRINGUP_MOTOR_TEXT_LOG_ENABLE (0U)
+#define BRINGUP_IMU_GYRO_CALIBRATION_SAMPLES (1000U)
 
 static bringup_test_context_t g_bringup_test;
 
@@ -167,8 +168,7 @@ static void run_vehicle_app(void)
     app_ui_init();
     app_control_scheduler_init();
 
-    NVIC_EnableIRQ(GPIO_ENCODER_GPIOA_INT_IRQN);
-    NVIC_EnableIRQ(GPIO_ENCODER_GPIOB_INT_IRQN);
+    NVIC_EnableIRQ(GPIO_ENCODER_INT_IRQN);
 
     bsp_uart_debug_printf("system init done\r\n");
 
@@ -229,8 +229,7 @@ static void run_bringup_test(void)
     app_isr_set_encoder_driver(&g_bringup_test.encoder_driver);
     app_control_scheduler_init();
 
-    NVIC_EnableIRQ(GPIO_ENCODER_GPIOA_INT_IRQN);
-    NVIC_EnableIRQ(GPIO_ENCODER_GPIOB_INT_IRQN);
+    NVIC_EnableIRQ(GPIO_ENCODER_INT_IRQN);
 
     bsp_uart_debug_printf("bringup test start\r\n");
 
@@ -260,6 +259,11 @@ static void bringup_test_init(bringup_test_context_t *ctx)
         .dt_s = 0.01f,
         .accel_weight = 0.02f,
         .yaw_correction_weight = 0.0f,
+        .gyro_filter_alpha = 0.35f,
+        .enable_yaw_stationary_lock = true,
+        .yaw_rotate_enter_dps = 3.0f,
+        .yaw_stationary_enter_dps = 1.5f,
+        .yaw_bias_alpha = 0.02f,
     };
     static const float left_speed_filter_alpha = 0.75f;
     static const float left_output_limit_step = 1.0f;
@@ -368,7 +372,8 @@ static void bringup_test_init(bringup_test_context_t *ctx)
             ctx->imu_ready = (mpu9250_read_who_am_i(&ctx->imu, &ctx->imu_who_am_i) == STATUS_OK);
         }
         if (ctx->imu_ready) {
-            ctx->imu_ready = (mpu9250_calibrate_gyro_bias(&ctx->imu, 32U) == STATUS_OK);
+            ctx->imu_ready = (mpu9250_calibrate_gyro_bias(
+                &ctx->imu, BRINGUP_IMU_GYRO_CALIBRATION_SAMPLES) == STATUS_OK);
         }
     }
 
@@ -379,10 +384,11 @@ static void bringup_test_init(bringup_test_context_t *ctx)
         oled_get_last_failed_index(),
         oled_get_last_failed_command(),
         oled_get_last_status());
-    bsp_uart_debug_printf("mpu probe=%u ready=%u who_am_i=0x%02X\r\n",
+    bsp_uart_debug_printf("mpu probe=%u ready=%u who_am_i=0x%02X gyro_bias_z=%.3f\r\n",
         ctx->imu_probe_ok ? 1U : 0U,
         ctx->imu_ready ? 1U : 0U,
-        ctx->imu_who_am_i);
+        ctx->imu_who_am_i,
+        ctx->imu.gyro_bias_dps.z);
     bsp_uart_debug_printf("bringup output test=%u\r\n", (unsigned) test_mode);
     if (test_mode == BRINGUP_OUTPUT_TEST_DC_MOTOR) {
         bsp_uart_debug_printf("motor=LEFT pos-loop AIN1/AIN2\r\n");
@@ -493,10 +499,13 @@ static void bringup_test_process(bringup_test_context_t *ctx, const scheduler_fl
             if ((ctx->imu_ready) &&
                 (test_mode == BRINGUP_OUTPUT_TEST_IMU) &&
                 (BRINGUP_IMU_TEXT_LOG_ENABLE != 0U)) {
-                bsp_uart_debug_printf("imu roll=%.2f yaw=%.2f pitch=%.2f\r\n",
+                bsp_uart_debug_printf("imu roll=%.2f yaw=%.2f pitch=%.2f gyro_z=%.3f rotating=%u yaw_bias=%.3f\r\n",
                     ctx->imu_roll_deg,
                     ctx->imu_yaw_deg,
-                    ctx->imu_pitch_deg);
+                    ctx->imu_pitch_deg,
+                    ctx->imu.gyro_dps.z,
+                    ctx->imu_fusion.yaw_rotating ? 1U : 0U,
+                    ctx->imu_fusion.yaw_gyro_bias_dps);
             }
         }
         bringup_test_send_vofa(ctx, flags->tick_ms);

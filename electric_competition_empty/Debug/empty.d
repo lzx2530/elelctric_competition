@@ -41,8 +41,9 @@ empty.o: ../empty.c ../app/app_chassis.h \
  D:/ccs/elelctric_competition/electric_competition_empty/app/app_chassis.h \
  D:/ccs/elelctric_competition/electric_competition_empty/app/app_imu.h \
  D:/ccs/elelctric_competition/electric_competition_empty/app/app_turret.h \
- ../algo/algo_filter.h ../algo/algo_fusion.h ../algo/algo_pid.h \
- ../bsp/bsp_gpio.h ../bsp/bsp_i2c.h \
+ ../algo/algo_filter.h ../algo/algo_fusion.h \
+ D:/ccs/elelctric_competition/electric_competition_empty/algo/algo_filter.h \
+ ../algo/algo_pid.h ../bsp/bsp_gpio.h ../bsp/bsp_i2c.h \
  D:/ccs/elelctric_competition/electric_competition_empty/common/status.h \
  ../bsp/bsp_pwm.h ../bsp/bsp_uart.h ../common/math_util.h \
  ../drivers/drv_encoder_ab.h ../drivers/drv_line_sensor.h \
@@ -150,6 +151,7 @@ D:/ccs/elelctric_competition/electric_competition_empty/app/app_imu.h:
 D:/ccs/elelctric_competition/electric_competition_empty/app/app_turret.h:
 ../algo/algo_filter.h:
 ../algo/algo_fusion.h:
+D:/ccs/elelctric_competition/electric_competition_empty/algo/algo_filter.h:
 ../algo/algo_pid.h:
 ../bsp/bsp_gpio.h:
 ../bsp/bsp_i2c.h:

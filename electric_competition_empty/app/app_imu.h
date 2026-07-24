@@ -10,6 +10,8 @@ typedef struct {
     float pitch_deg;
     float yaw_deg;
     float gyro_z_dps;
+    float yaw_gyro_bias_dps;
+    bool yaw_rotating;
 } imu_snapshot_t;
 
 void app_imu_init(void);
