@@ -8,6 +8,7 @@
 #define K230_RINGBUF_SIZE    (256U)
 #define DEBUG_RX_RINGBUF_SIZE (128U)
 #define DEBUG_PRINTF_BUFFER  (192U)
+#define UART_K230_TX_WAIT_LIMIT (100000U)
 #define UART_RX_ERROR_INTERRUPTS (DL_UART_MAIN_INTERRUPT_OVERRUN_ERROR | \
     DL_UART_MAIN_INTERRUPT_BREAK_ERROR | DL_UART_MAIN_INTERRUPT_PARITY_ERROR | \
     DL_UART_MAIN_INTERRUPT_FRAMING_ERROR | DL_UART_MAIN_INTERRUPT_RX_TIMEOUT_ERROR | \
@@ -69,7 +70,7 @@ void bsp_uart_enable_irqs(void)
     NVIC_ClearPendingIRQ(UART_DEBUG_INST_INT_IRQN);
     NVIC_EnableIRQ(UART_DEBUG_INST_INT_IRQN);
 
-    DL_UART_Main_enableInterrupt(UART_K230_INST, UART_RX_ERROR_INTERRUPTS);
+    DL_UART_Main_enableInterrupt(UART_K230_INST, DL_UART_MAIN_INTERRUPT_RX | UART_RX_ERROR_INTERRUPTS);
 
     NVIC_ClearPendingIRQ(UART_K230_INST_INT_IRQN);
     NVIC_EnableIRQ(UART_K230_INST_INT_IRQN);
@@ -116,6 +117,31 @@ void bsp_uart_debug_printf(const char *fmt, ...)
     }
 
     bsp_uart_debug_write((const uint8_t *) buffer, (uint16_t) length);
+}
+
+uint16_t bsp_uart_k230_write(const uint8_t *data, uint16_t length)
+{
+    uint16_t index;
+    uint32_t wait_count;
+
+    if (data == NULL) {
+        return 0U;
+    }
+    for (index = 0U; index < length; ++index) {
+        wait_count = UART_K230_TX_WAIT_LIMIT;
+        while (!DL_UART_Main_transmitDataCheck(UART_K230_INST, data[index])) {
+            if (--wait_count == 0U) {
+                return index;
+            }
+        }
+    }
+    return length;
+}
+
+void bsp_uart_k230_poll_rx(void)
+{
+    /* Covers a missed RX IRQ without changing the interrupt-driven fast path. */
+    bsp_uart_service_rx_fifo(UART_K230_INST, &g_k230_ringbuf);
 }
 
 ringbuf_t *bsp_uart_get_k230_ringbuf(void)

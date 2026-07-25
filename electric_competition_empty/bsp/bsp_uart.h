@@ -10,6 +10,8 @@ void bsp_uart_debug_write_byte(uint8_t byte);
 void bsp_uart_debug_write(const uint8_t *data, uint16_t length);
 void bsp_uart_debug_write_str(const char *str);
 void bsp_uart_debug_printf(const char *fmt, ...);
+uint16_t bsp_uart_k230_write(const uint8_t *data, uint16_t length);
+void bsp_uart_k230_poll_rx(void);
 ringbuf_t *bsp_uart_get_debug_ringbuf(void);
 /* 协议层从这里取接收环形缓冲区 */
 ringbuf_t *bsp_uart_get_k230_ringbuf(void);

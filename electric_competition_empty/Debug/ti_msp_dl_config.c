@@ -593,6 +593,10 @@ SYSCONFIG_WEAK void SYSCFG_DL_UART_K230_init(void)
     DL_UART_Main_enableInterrupt(UART_K230_INST,
                                  DL_UART_MAIN_INTERRUPT_RX);
 
+    /* Configure FIFOs */
+    DL_UART_Main_enableFIFOs(UART_K230_INST);
+    DL_UART_Main_setRXFIFOThreshold(UART_K230_INST, DL_UART_RX_FIFO_LEVEL_ONE_ENTRY);
+    DL_UART_Main_setTXFIFOThreshold(UART_K230_INST, DL_UART_TX_FIFO_LEVEL_1_2_EMPTY);
 
     DL_UART_Main_enable(UART_K230_INST);
 }

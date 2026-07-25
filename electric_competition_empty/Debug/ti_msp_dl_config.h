@@ -180,18 +180,18 @@ extern "C" {
 #define UART_DEBUG_IBRD_32_MHZ_115200_BAUD                                  (17)
 #define UART_DEBUG_FBRD_32_MHZ_115200_BAUD                                  (23)
 /* Defines for UART_K230 */
-#define UART_K230_INST                                                     UART2
+#define UART_K230_INST                                                     UART1
 #define UART_K230_INST_FREQUENCY                                        32000000
-#define UART_K230_INST_IRQHandler                               UART2_IRQHandler
-#define UART_K230_INST_INT_IRQN                                   UART2_INT_IRQn
-#define GPIO_UART_K230_RX_PORT                                             GPIOB
-#define GPIO_UART_K230_TX_PORT                                             GPIOB
+#define UART_K230_INST_IRQHandler                               UART1_IRQHandler
+#define UART_K230_INST_INT_IRQN                                   UART1_INT_IRQn
+#define GPIO_UART_K230_RX_PORT                                             GPIOA
+#define GPIO_UART_K230_TX_PORT                                             GPIOA
 #define GPIO_UART_K230_RX_PIN                                     DL_GPIO_PIN_18
 #define GPIO_UART_K230_TX_PIN                                     DL_GPIO_PIN_17
-#define GPIO_UART_K230_IOMUX_RX                                  (IOMUX_PINCM44)
-#define GPIO_UART_K230_IOMUX_TX                                  (IOMUX_PINCM43)
-#define GPIO_UART_K230_IOMUX_RX_FUNC                   IOMUX_PINCM44_PF_UART2_RX
-#define GPIO_UART_K230_IOMUX_TX_FUNC                   IOMUX_PINCM43_PF_UART2_TX
+#define GPIO_UART_K230_IOMUX_RX                                  (IOMUX_PINCM40)
+#define GPIO_UART_K230_IOMUX_TX                                  (IOMUX_PINCM39)
+#define GPIO_UART_K230_IOMUX_RX_FUNC                   IOMUX_PINCM40_PF_UART1_RX
+#define GPIO_UART_K230_IOMUX_TX_FUNC                   IOMUX_PINCM39_PF_UART1_TX
 #define UART_K230_BAUD_RATE                                             (115200)
 #define UART_K230_IBRD_32_MHZ_115200_BAUD                                   (17)
 #define UART_K230_FBRD_32_MHZ_115200_BAUD                                   (23)

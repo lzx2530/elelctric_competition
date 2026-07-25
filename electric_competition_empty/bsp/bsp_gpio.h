@@ -17,6 +17,7 @@ void bsp_gpio_set_motor_dir(bool left_forward, bool right_forward);
 void bsp_gpio_set_turret_dir(bool yaw_positive, bool pitch_positive);
 void bsp_gpio_set_dir_output(bsp_dir_output_t output, bool high);
 void bsp_gpio_set_laser(bool on);
+void bsp_gpio_set_magnet(bool on);
 void bsp_gpio_set_buzzer(bool on);
 void bsp_gpio_init_line_mux(void);
 void bsp_gpio_set_line_mux_address(uint8_t address);

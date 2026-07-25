@@ -45,7 +45,7 @@ void GROUP1_IRQHandler(void)
     }
 }
 
-void UART2_IRQHandler(void)
+void UART_K230_INST_IRQHandler(void)
 {
     bsp_uart_k230_irq_handler();
 }

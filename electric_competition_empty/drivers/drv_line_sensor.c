@@ -12,16 +12,6 @@ static void line_sensor_delay_cycles(uint16_t cycles)
     }
 }
 
-static uint16_t line_sensor_read_channel_raw(const line_sensor_handle_t *handle, uint8_t channel)
-{
-    bool active;
-
-    bsp_gpio_set_line_mux_address(channel);
-    line_sensor_delay_cycles(handle->cfg.settle_cycles);
-    active = bsp_gpio_read_line_mux_out();
-    return active ? 1U : 0U;
-}
-
 void line_sensor_init(line_sensor_handle_t *handle, const line_sensor_config_t *cfg)
 {
     handle->cfg = *cfg;
@@ -45,10 +35,14 @@ void line_sensor_update(line_sensor_handle_t *handle)
     uint8_t raw = 0U;
     uint8_t hits = 0U;
 
+    uint8_t direct_bits;
+
+    line_sensor_delay_cycles(handle->cfg.settle_cycles);
+    direct_bits = bsp_gpio_read_line_bits();
     for (uint8_t i = 0U; i < 8U; i++) {
         bool active;
 
-        handle->raw_state[i] = (uint8_t) line_sensor_read_channel_raw(handle, i);
+        handle->raw_state[i] = (uint8_t)((direct_bits >> i) & 0x01U);
 
         active = (handle->raw_state[i] != 0U);
         if (!handle->cfg.active_high) {

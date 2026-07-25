@@ -1,5 +1,7 @@
 #include "app/app_chassis.h"
 
+#include "app/app_chassis.h"
+
 #include "algo/algo_filter.h"
 #include "algo/algo_pid.h"
 #include "common/math_util.h"
@@ -130,6 +132,9 @@ typedef struct {
     bool corner_entry_cleared;
     uint8_t corner_reacquire_count;
     uint8_t center_history;
+    app_chassis_mode_t mode;
+    float external_forward_rps;
+    float external_yaw_rps;
     chassis_snapshot_t snapshot;
 } chassis_app_t;
 
@@ -577,6 +582,9 @@ void app_chassis_init(void)
     g_chassis.corner_entry_cleared = false;
     g_chassis.corner_reacquire_count = 0U;
     g_chassis.center_history = 0U;
+    g_chassis.mode = APP_CHASSIS_MODE_STOP;
+    g_chassis.external_forward_rps = 0.0f;
+    g_chassis.external_yaw_rps = 0.0f;
 }
 
 void app_chassis_line_task(void)
@@ -608,7 +616,17 @@ void app_chassis_control_task(float control_dt_s, float elapsed_s)
     chassis_update_corner_pivot_pause(&g_chassis, elapsed_s);
 
     line_error = g_chassis.line_sensor.line_error;
-    chassis_get_wheel_targets(&g_chassis, &left_ref, &right_ref);
+    if (g_chassis.mode == APP_CHASSIS_MODE_LINE_FOLLOW) {
+        chassis_get_wheel_targets(&g_chassis, &left_ref, &right_ref);
+    } else if (g_chassis.mode == APP_CHASSIS_MODE_EXTERNAL) {
+        left_ref = math_clampf(g_chassis.external_forward_rps + g_chassis.external_yaw_rps,
+            -g_wheel_target_limit_rps, g_wheel_target_limit_rps);
+        right_ref = math_clampf(g_chassis.external_forward_rps - g_chassis.external_yaw_rps,
+            -g_wheel_target_limit_rps, g_wheel_target_limit_rps);
+    } else {
+        left_ref = 0.0f;
+        right_ref = 0.0f;
+    }
 
     motor_dc_set_output(&g_chassis.left_motor,
         chassis_get_forward_output(&g_chassis.left_speed_pid, left_ref, left_speed));
@@ -635,4 +653,43 @@ const chassis_snapshot_t *app_chassis_get_snapshot(void)
 encoder_driver_t *app_chassis_get_encoder_driver(void)
 {
     return &g_chassis.encoder_driver;
+}
+
+void app_chassis_enable_line_follow(void)
+{
+    g_chassis.mode = APP_CHASSIS_MODE_LINE_FOLLOW;
+}
+
+void app_chassis_set_external_drive(float forward_rps, float yaw_rps)
+{
+    g_chassis.external_forward_rps = forward_rps;
+    g_chassis.external_yaw_rps = yaw_rps;
+    g_chassis.mode = APP_CHASSIS_MODE_EXTERNAL;
+}
+
+void app_chassis_stop(void)
+{
+    g_chassis.external_forward_rps = 0.0f;
+    g_chassis.external_yaw_rps = 0.0f;
+    g_chassis.mode = APP_CHASSIS_MODE_STOP;
+}
+
+void app_chassis_get_encoder_counts(int32_t *left, int32_t *right)
+{
+    if (left != NULL) {
+        *left = g_chassis.encoder_driver.left.count;
+    }
+    if (right != NULL) {
+        *right = g_chassis.encoder_driver.right.count;
+    }
+}
+
+float app_chassis_get_average_distance_mm(int32_t left_start, int32_t right_start)
+{
+    float left_turns = math_absf((float)(g_chassis.encoder_driver.left.count - left_start)) /
+        g_chassis.encoder_driver.left.cfg.counts_per_revolution;
+    float right_turns = math_absf((float)(g_chassis.encoder_driver.right.count - right_start)) /
+        g_chassis.encoder_driver.right.cfg.counts_per_revolution;
+
+    return 0.5f * (left_turns + right_turns) * 3.1415926f * g_wheel_diameter_m * 1000.0f;
 }

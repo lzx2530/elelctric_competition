@@ -10,6 +10,12 @@ typedef enum {
     APP_LINE_FOLLOW_RECOVER = 3U,
 } app_line_follow_state_t;
 
+typedef enum {
+    APP_CHASSIS_MODE_LINE_FOLLOW = 0U,
+    APP_CHASSIS_MODE_EXTERNAL = 1U,
+    APP_CHASSIS_MODE_STOP = 2U,
+} app_chassis_mode_t;
+
 /* Chassis telemetry snapshot for UI, VOFA+, and debug output. */
 typedef struct {
     float left_speed_rps;
@@ -33,5 +39,10 @@ void app_chassis_line_task(void);
 void app_chassis_control_task(float control_dt_s, float elapsed_s);
 const chassis_snapshot_t *app_chassis_get_snapshot(void);
 encoder_driver_t *app_chassis_get_encoder_driver(void);
+void app_chassis_enable_line_follow(void);
+void app_chassis_set_external_drive(float forward_rps, float yaw_rps);
+void app_chassis_stop(void);
+void app_chassis_get_encoder_counts(int32_t *left, int32_t *right);
+float app_chassis_get_average_distance_mm(int32_t left_start, int32_t right_start);
 
 #endif

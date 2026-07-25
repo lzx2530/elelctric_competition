@@ -34,7 +34,7 @@ empty.o: ../empty.c ../app/app_chassis.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_sysctl.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/sysctl/hw_sysctl_mspm0g1x0x_g3x0x.h \
  ../app/app_control_scheduler.h ../app/app_imu.h ../app/app_isr.h \
- ../app/app_turret.h \
+ ../app/steelball_task.h ../app/app_turret.h \
  D:/ccs/elelctric_competition/electric_competition_empty/protocol/proto_k230.h \
  D:/ccs/elelctric_competition/electric_competition_empty/common/ringbuf.h \
  ../app/app_ui.h \
@@ -51,7 +51,7 @@ empty.o: ../empty.c ../app/app_chassis.h \
  ../drivers/drv_mpu9250.h ../drivers/drv_oled_ssd1306.h \
  ../drivers/drv_stepper.h \
  D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_gpio.h \
- ../protocol/proto_k230.h ../protocol/proto_vofa_firewater.h \
+ ../protocol/proto_vofa_firewater.h \
  ti_msp_dl_config.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/driverlib/driverlib.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/driverlib/dl_adc12.h \
@@ -141,6 +141,7 @@ D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/sysc
 ../app/app_control_scheduler.h:
 ../app/app_imu.h:
 ../app/app_isr.h:
+../app/steelball_task.h:
 ../app/app_turret.h:
 D:/ccs/elelctric_competition/electric_competition_empty/protocol/proto_k230.h:
 D:/ccs/elelctric_competition/electric_competition_empty/common/ringbuf.h:
@@ -165,7 +166,6 @@ D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_pwm.h:
 ../drivers/drv_oled_ssd1306.h:
 ../drivers/drv_stepper.h:
 D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_gpio.h:
-../protocol/proto_k230.h:
 ../protocol/proto_vofa_firewater.h:
 ti_msp_dl_config.h:
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/driverlib/driverlib.h:
