@@ -1,6 +1,6 @@
 {
     "python.analysis.extraPaths": [
-        "C:\\Users\\ASUS\\.kendryte\\k230_canmv_stubs\\8cb7c3cb673540796bd97b21a58a33dab9004dfb"
+        "C:\\Users\\ASUS\\.kendryte\\k230_canmv_stubs\\fd97a5d89e1e572bb208bac8187d7e02847ac4a1"
     ],
     "python.analysis.stubPath": "C:\\Users\\ASUS\\.kendryte\\k230_canmv_pylance\\560bf6ca06992a7f\\typings"
 }

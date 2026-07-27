@@ -24,6 +24,7 @@
 "./drivers/drv_mpu9250.o"
 "./drivers/drv_oled_ssd1306.o"
 "./drivers/drv_stepper.o"
+"./protocol/proto_esp_uart.o"
 "./protocol/proto_k230.o"
 "./protocol/proto_vofa_firewater.o"
 -l"./device_linker.cmd"

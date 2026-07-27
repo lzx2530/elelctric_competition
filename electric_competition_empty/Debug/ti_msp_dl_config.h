@@ -195,6 +195,22 @@ extern "C" {
 #define UART_K230_BAUD_RATE                                             (115200)
 #define UART_K230_IBRD_32_MHZ_115200_BAUD                                   (17)
 #define UART_K230_FBRD_32_MHZ_115200_BAUD                                   (23)
+/* Defines for UART_ESP */
+#define UART_ESP_INST                                                      UART2
+#define UART_ESP_INST_FREQUENCY                                         32000000
+#define UART_ESP_INST_IRQHandler                                UART2_IRQHandler
+#define UART_ESP_INST_INT_IRQN                                    UART2_INT_IRQn
+#define GPIO_UART_ESP_RX_PORT                                              GPIOB
+#define GPIO_UART_ESP_TX_PORT                                              GPIOB
+#define GPIO_UART_ESP_RX_PIN                                      DL_GPIO_PIN_18
+#define GPIO_UART_ESP_TX_PIN                                      DL_GPIO_PIN_17
+#define GPIO_UART_ESP_IOMUX_RX                                   (IOMUX_PINCM44)
+#define GPIO_UART_ESP_IOMUX_TX                                   (IOMUX_PINCM43)
+#define GPIO_UART_ESP_IOMUX_RX_FUNC                    IOMUX_PINCM44_PF_UART2_RX
+#define GPIO_UART_ESP_IOMUX_TX_FUNC                    IOMUX_PINCM43_PF_UART2_TX
+#define UART_ESP_BAUD_RATE                                                (9600)
+#define UART_ESP_IBRD_32_MHZ_9600_BAUD                                     (208)
+#define UART_ESP_FBRD_32_MHZ_9600_BAUD                                      (21)
 
 
 
@@ -300,6 +316,7 @@ void SYSCFG_DL_TIMER_CTRL_1KHZ_init(void);
 void SYSCFG_DL_I2C_SENSOR_BUS_init(void);
 void SYSCFG_DL_UART_DEBUG_init(void);
 void SYSCFG_DL_UART_K230_init(void);
+void SYSCFG_DL_UART_ESP_init(void);
 
 
 bool SYSCFG_DL_saveConfiguration(void);

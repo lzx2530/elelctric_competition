@@ -51,7 +51,7 @@ empty.o: ../empty.c ../app/app_chassis.h \
  ../drivers/drv_mpu9250.h ../drivers/drv_oled_ssd1306.h \
  ../drivers/drv_stepper.h \
  D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_gpio.h \
- ../protocol/proto_vofa_firewater.h \
+ ../protocol/proto_esp_uart.h ../protocol/proto_vofa_firewater.h \
  ti_msp_dl_config.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/driverlib/driverlib.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/driverlib/dl_adc12.h \
@@ -166,6 +166,7 @@ D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_pwm.h:
 ../drivers/drv_oled_ssd1306.h:
 ../drivers/drv_stepper.h:
 D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_gpio.h:
+../protocol/proto_esp_uart.h:
 ../protocol/proto_vofa_firewater.h:
 ti_msp_dl_config.h:
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/driverlib/driverlib.h:

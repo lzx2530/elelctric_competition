@@ -51,6 +51,7 @@
 #include "drivers/drv_mpu9250.h"
 #include "drivers/drv_oled_ssd1306.h"
 #include "drivers/drv_stepper.h"
+#include "protocol/proto_esp_uart.h"
 #include "protocol/proto_vofa_firewater.h"
 #include "ti_msp_dl_config.h"
 
@@ -107,9 +108,11 @@ typedef enum {
 #define BRINGUP_MOTOR_TEXT_LOG_ENABLE (0U)
 
 static bringup_test_context_t g_bringup_test;
+static esp_uart_protocol_t g_esp_uart_protocol;
 
 static void run_vehicle_app(void);
-static void vehicle_poll_debug_command(void);
+static void vehicle_poll_esp_uart(void);
+static void vehicle_handle_esp_frame(const esp_uart_frame_t *frame);
 static void run_bringup_test(void);
 static void bringup_test_init(bringup_test_context_t *ctx);
 static void bringup_test_process(bringup_test_context_t *ctx, const scheduler_flags_t *flags);
@@ -142,6 +145,7 @@ static void run_vehicle_app(void)
 {
     scheduler_flags_t scheduler_flags;
     uint32_t last_chassis_control_tick_ms = 0U;
+    uint32_t last_esp_heartbeat_ms = 0U;
     ringbuf_t *k230_ringbuf;
     static const proto_vofa_firewater_mode_t vofa_mode = PROTO_VOFA_FIREWATER_MODE_NAMED;
     static const char *const vofa_names[15] = {
@@ -180,6 +184,9 @@ static void run_vehicle_app(void)
     app_ui_init();
     app_control_scheduler_init();
     steelball_init();
+    proto_esp_uart_init(&g_esp_uart_protocol, vehicle_handle_esp_frame);
+    (void)proto_esp_uart_send(&g_esp_uart_protocol, ESP_UART_MESSAGE_HELLO,
+        (const uint8_t *)"TI UART2 ready", 14U);
 
     NVIC_EnableIRQ(GPIO_ENCODER_INT_IRQN);
 
@@ -197,7 +204,7 @@ static void run_vehicle_app(void)
         if (k230_length > 0U) {
             steelball_rx_bytes(k230_bytes, k230_length);
         }
-        vehicle_poll_debug_command();
+        vehicle_poll_esp_uart();
 
         /* The scheduler snapshots and clears flags so each task consumes one tick at most once. */
         app_control_scheduler_fetch(&scheduler_flags);
@@ -208,6 +215,11 @@ static void run_vehicle_app(void)
         if (scheduler_flags.imu_10ms) {
             app_imu_task();
             steelball_task_10ms(scheduler_flags.tick_ms);
+            if ((uint32_t)(scheduler_flags.tick_ms - last_esp_heartbeat_ms) >= 1000U) {
+                last_esp_heartbeat_ms = scheduler_flags.tick_ms;
+                (void)proto_esp_uart_send(&g_esp_uart_protocol, ESP_UART_MESSAGE_HEARTBEAT,
+                    (const uint8_t *)"TI alive", 8U);
+            }
         }
         if (scheduler_flags.control_1khz) {
             uint32_t elapsed_ms = scheduler_flags.tick_ms - last_chassis_control_tick_ms;
@@ -259,40 +271,47 @@ static void run_vehicle_app(void)
     }
 }
 
-static void vehicle_poll_debug_command(void)
+static void vehicle_poll_esp_uart(void)
 {
-    ringbuf_t *debug_ringbuf = bsp_uart_get_debug_ringbuf();
-    static char line[24];
-    static uint8_t length = 0U;
-    uint8_t byte;
+    bsp_uart_esp_poll_rx();
+    proto_esp_uart_process_ringbuf(&g_esp_uart_protocol, bsp_uart_get_esp_ringbuf());
+}
 
-    while (ringbuf_pop_byte(debug_ringbuf, &byte)) {
-        if ((byte == '\r') || (byte == '\n')) {
-            if (length == 0U) {
-                continue;
-            }
-            line[length] = '\0';
-            if (strcmp(line, "steel start") == 0) {
-                bsp_uart_debug_printf("steel start %s\r\n",
-                    steelball_start_mission() ? "sent" : "busy");
-            } else if (strcmp(line, "steel abort") == 0) {
-                steelball_abort_mission();
-                bsp_uart_debug_printf("steel abort\r\n");
-            } else if (strcmp(line, "steel reset") == 0) {
-                steelball_reset_mission();
-                bsp_uart_debug_printf("steel reset\r\n");
-            } else {
-                bsp_uart_debug_printf("steel commands: start abort reset\r\n");
-            }
-            length = 0U;
-            continue;
-        }
-        if (length >= (uint8_t)(sizeof(line) - 1U)) {
-            length = 0U;
-            continue;
-        }
-        line[length++] = (char)byte;
+static void vehicle_handle_esp_frame(const esp_uart_frame_t *frame)
+{
+    static const uint8_t ack_payload_length = 2U;
+    uint8_t ack_payload[2];
+    uint8_t payload_index;
+
+    if (frame->type != ESP_UART_MESSAGE_TEXT) {
+        return;
     }
+
+    bsp_uart_debug_printf("esp text seq=%u len=%u: ", frame->sequence,
+        frame->payload_length);
+    for (payload_index = 0U; payload_index < frame->payload_length; ++payload_index) {
+        uint8_t value = frame->payload[payload_index];
+        bsp_uart_debug_write_byte((value >= 32U) && (value <= 126U) ? value : (uint8_t)'.');
+    }
+    bsp_uart_debug_write_str("\r\n");
+
+    if ((frame->payload_length == 11U) &&
+        (memcmp(frame->payload, "steel start", frame->payload_length) == 0)) {
+        bsp_uart_debug_printf("steel start %s\r\n", steelball_start_mission() ? "sent" : "busy");
+    } else if ((frame->payload_length == 11U) &&
+        (memcmp(frame->payload, "steel abort", frame->payload_length) == 0)) {
+        steelball_abort_mission();
+        bsp_uart_debug_printf("steel abort\r\n");
+    } else if ((frame->payload_length == 11U) &&
+        (memcmp(frame->payload, "steel reset", frame->payload_length) == 0)) {
+        steelball_reset_mission();
+        bsp_uart_debug_printf("steel reset\r\n");
+    }
+
+    ack_payload[0] = frame->sequence;
+    ack_payload[1] = (uint8_t)frame->type;
+    (void)proto_esp_uart_send(&g_esp_uart_protocol, ESP_UART_MESSAGE_ACK,
+        ack_payload, ack_payload_length);
 }
 
 static void run_bringup_test(void)

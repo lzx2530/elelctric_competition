@@ -50,6 +50,11 @@ void UART_K230_INST_IRQHandler(void)
     bsp_uart_k230_irq_handler();
 }
 
+void UART_ESP_INST_IRQHandler(void)
+{
+    bsp_uart_esp_irq_handler();
+}
+
 void UART0_IRQHandler(void)
 {
     bsp_uart_debug_irq_handler();
