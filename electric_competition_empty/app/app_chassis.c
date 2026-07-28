@@ -74,29 +74,30 @@ static const pid_config_t g_line_pid_cfg = {
     .enable_setpoint_ramp = false,
 };
 
-static const float g_track_speed_rps = 5.5f;
+static const float g_track_speed_rps = 7.5f;
 static const float g_track_large_error_speed_rps = 3.0f;
-static const float g_wheel_target_limit_rps = 6.0f;
-static const float g_corner_pivot_speed_rps = 1.0f;
+static const float g_wheel_target_limit_rps = 10.0f;
+static const float g_corner_pivot_speed_rps = 1.5f;
 // static const float g_lost_speed_rps = 1.0f;
-static const uint8_t g_corner_stop_confirm_samples = 20U;
 static const float g_corner_dash_speed_rps = 2.5f;
-static const uint16_t g_corner_dash_samples = 80U;
+static const uint16_t g_corner_dash_samples = 60U;
+static const uint8_t g_corner_stop_confirm_samples = 20U;
 static const float g_corner_stop_speed_threshold_rps = 0.15f;
-static const float g_wheel_track_m = 0.120f;
+static const float g_wheel_track_m = 0.110f;
 static const float g_wheel_diameter_m = 0.065f;
 static const float g_corner_pivot_pause_s = 0.5f;
+static const uint8_t g_corner_reacquire_samples = 3U;
 static const float g_recover_turn_speed_rps = 1.0f;
 // static const float g_recover_inner_speed_rps = 0.0f;
 // static const float g_track_line_gain = 0.85f;
 static const float g_line_deadband = 0.10f;
 static const float g_line_error_limit = 2.50f;
 static const uint16_t g_lost_hold_samples = 40U;
-static const uint16_t g_recover_flip_samples = 500U;
-static const uint8_t g_corner_confirm_samples = 2U;
-static const uint8_t g_corner_reacquire_samples = 2U;
+static const uint16_t g_recover_flip_samples = 2U;
+static const uint8_t g_corner_confirm_samples = 4U;
 static const float g_speed_filter_alpha = 0.20f;
-const float g_dynamic_gain_threshold = 1.5f;
+static const float g_track_output_boost = 0.40f;
+const float g_dynamic_gain_threshold = 2.6f;
 
 
 #define LINE_SENSOR_LEFT_HALF_MASK     (0x0FU)
@@ -130,6 +131,7 @@ typedef struct {
     bool corner_entry_cleared;
     uint8_t corner_reacquire_count;
     uint8_t center_history;
+    int8_t locked_turn;
     chassis_snapshot_t snapshot;
 } chassis_app_t;
 
@@ -161,45 +163,72 @@ static uint8_t chassis_count_bits(uint8_t bits)
     return count;
 }
 
-static int8_t chassis_get_corner_candidate(uint8_t raw_bits)
+static int8_t chassis_get_corner_candidate(uint8_t raw_bits, chassis_app_t *chassis)
 {
+    // locked_turn：直角弯方向锁定 (-1:左转中, 1:右转中, 0:未锁)
+    // 作用：防止转弯转到一半，车头甩过去导致传感器误判回打！ 
     uint8_t total_hits = chassis_count_bits(raw_bits);
 
-   // 【补丁】：处理拐弯处粗线导致大量传感器亮灯的情况
-    if (total_hits >= 5U) {
-        bool left_side  = (raw_bits & 0x03U) != 0U;   // 左侧最外侧2个传感器
-        bool right_side = (raw_bits & 0xC0U) != 0U;   // 右侧最外侧2个传感器
-        
-        if (left_side && right_side) {
-            // 左右都压到，可能是非常粗的弯道或暂时性全覆盖
-            // 这里可以选择直行，或者根据之前的方向惯性，但最简单先返回0
-            return 0;
+    // -------------------------------------------------------------
+    // 1. 如果处于直角弯锁定状态，优先检查是否“过弯完成”
+    // -------------------------------------------------------------
+    if (chassis->locked_turn != 0) {
+        // 静态计数器：记录在时间维度上“连续有灯亮”的次数
+        static uint8_t unlock_confirm_count = 0;
+
+        // 只要有任意传感器亮灯（说明车头开始切入黑线）
+        if (total_hits > 0U) {
+            unlock_confirm_count++;
+        } else {
+            // 中途若断线/全灭（如遇到砖缝间隙），瞬间重置计数，防抖动误解锁
+            unlock_confirm_count = 0U;
         }
-        
-        if (left_side)  return -1;   // 左侧压线 → 往左转（跟随左弯）
-        if (right_side) return 1;    // 右侧压线 → 往右转（跟随右弯）
-        
-        // 亮灯很多但没有明显压到两侧，可能是完全压在粗线中间
-        return 0;   // 保持直行
+
+        // 连续 2 帧（如果觉得不够稳，可以改为 3U）都检测到黑线，确认过弯完成！
+        if (unlock_confirm_count >= 2U) {
+            chassis->locked_turn = 0;   // 解锁，恢复正常 PID 巡线
+            unlock_confirm_count = 0U;  // 清空计数器，供下次使用
+        } else {
+            // 还没达到连续确认次数，坚决保持之前的转向，绝不中途反打！
+            return chassis->locked_turn;
+        }
     }
 
-    if (total_hits < 3U) {
-        return 0;
-    }
+    // -------------------------------------------------------------
+    // 2. 统计左右半边的灯数
+    // -------------------------------------------------------------
+    // 0x0F (0000 1111) 为左半边 4 个传感器 (Bit 0~3)
+    // 0xF0 (1111 0000) 为右半边 4 个传感器 (Bit 4~7)
+    uint8_t left_hits  = chassis_count_bits(raw_bits & 0x0FU); 
+    uint8_t right_hits = chassis_count_bits(raw_bits & 0xF0U); 
 
-    uint8_t left_hits = chassis_count_bits(raw_bits & LINE_SENSOR_LEFT_HALF_MASK);
-    uint8_t right_hits = chassis_count_bits(raw_bits & LINE_SENSOR_RIGHT_HALF_MASK);
-    bool touches_left_edge = (raw_bits & 0x01U) != 0U;
-    bool touches_right_edge = (raw_bits & 0x80U) != 0U;
+    bool touches_left_edge  = (raw_bits & 0x01U) != 0U; // Bit 0 最左
+    bool touches_right_edge = (raw_bits & 0x80U) != 0U; // Bit 7 最右
 
+    // -------------------------------------------------------------
+    // 3. 优先判定“直角弯特征”（比较左右相对优势，而不是只看极值）
+    // -------------------------------------------------------------
+    // 左直角弯：左半边亮了 3 个及以上，且最左侧触线，且左边数量绝对多于右边
     if (touches_left_edge && (left_hits >= 3U) && (left_hits > right_hits)) {
+        chassis->locked_turn = -1; // 锁定左转
         return -1;
     }
-    
+
+    // 右直角弯：右半边亮了 3 个及以上，且最右侧触线，且右边数量绝对多于左边
     if (touches_right_edge && (right_hits >= 3U) && (right_hits > left_hits)) {
+        chassis->locked_turn = 1;  // 锁定右转
         return 1;
     }
 
+    // -------------------------------------------------------------
+    // 4. 极粗线/全亮（全黑线或交叉口）保底处理
+    // -------------------------------------------------------------
+    if (total_hits >= 6U) {
+        // 如果之前有锁定，沿用锁定；否则返回 0 保持直行
+        return chassis->locked_turn;
+    }
+
+    // 5. 没达到直角弯标准，返回 0，交给普通 PID 或巡线逻辑
     return 0;
 }
 static int8_t chassis_confirm_corner_candidate(chassis_app_t *chassis, int8_t candidate)
@@ -228,9 +257,9 @@ static int8_t chassis_confirm_corner_candidate(chassis_app_t *chassis, int8_t ca
     return candidate;
 }
 
-static bool chassis_corner_entry_present(const chassis_app_t *chassis)
+static bool chassis_corner_entry_present(chassis_app_t *chassis)
 {
-    int8_t candidate = chassis_get_corner_candidate(chassis->line_sensor.raw_bits);
+    int8_t candidate = chassis_get_corner_candidate(chassis->line_sensor.raw_bits,chassis);
 
     if (chassis->corner_bias < 0.0f) {
         return candidate < 0;
@@ -244,7 +273,6 @@ static bool chassis_corner_complete(chassis_app_t *chassis)
     uint8_t raw_bits = chassis->line_sensor.raw_bits;
 
     if (!chassis->corner_entry_cleared) {
-        // 等待车头完全离开入弯时的横向黑线
         if (!chassis_corner_entry_present(chassis)) {
             chassis->corner_entry_cleared = true;
         }
@@ -252,34 +280,72 @@ static bool chassis_corner_complete(chassis_app_t *chassis)
         return false;
     }
 
-    if (!chassis->corner_pivot_angle_ready) {
+    if (chassis->line_state_samples < g_corner_dash_samples) {
         chassis->corner_reacquire_count = 0U;
         return false;
     }
 
-    // --- 滤除砖缝与噪点干扰的核心逻辑 ---
-    // 1. 中心必须踩到线（只要中间两个有一个亮就行）
-    bool center_hit = (raw_bits & LINE_SENSOR_CENTER_MASK) != 0U;
-    
-    // 2. 最左(bit0)和最右(bit7)的边缘绝对不能踩到线
-    // 真正的中心纵线是不可能让边缘灯亮的，如果边缘亮了，说明是扫过了砖缝或横线
-    uint8_t right_hits = chassis_count_bits(raw_bits & LINE_SENSOR_RIGHT_HALF_MASK);
-    bool edge_clear = (raw_bits & 0x81U) == 0U; 
-
-    // 如果中心没对准，或者边缘还在踩脏东西，直接清零稳定计数器
-    if ((!center_hit || !edge_clear) && (right_hits < 2U)) {
+    if (chassis->corner_stop_confirm_count < g_corner_stop_confirm_samples) {
         chassis->corner_reacquire_count = 0U;
         return false;
     }
 
-    // 只有姿态干净（中心亮且边缘灭），才开始累加稳定度
+    if (raw_bits == 0U) {
+        chassis->corner_reacquire_count = 0U;
+        return false;
+    }
+
     if (chassis->corner_reacquire_count < UINT8_MAX) {
         chassis->corner_reacquire_count++;
     }
 
-    // 判断是否达到了稳定样本数要求
+    return chassis->corner_reacquire_count >= g_corner_reacquire_samples;
+
+    // 1. 等待车头完全离开入弯时的横向黑线
+#if 0
+    if (!chassis->corner_entry_cleared) {
+        if (!chassis_corner_entry_present(chassis)) {
+            chassis->corner_entry_cleared = true;
+        }
+        chassis->corner_sensor_sequence_step = 0U;
+        return false;
+    }
+
+    // 2. 等待打转角度或旋转逻辑准备就绪
+    if (chassis->corner_stop_confirm_count < g_corner_stop_confirm_samples) {
+        chassis->corner_sensor_sequence_step = 0U;
+        return false;
+    }
+
+    // ==================== 核心判定逻辑修复 ====================
+
+    // A. 抓线判定：只要传感阵列抓到了黑线（1 到 4 个灯亮均算有效抓线）
+    return chassis_corner_sensor_sequence_complete(chassis, raw_bits);
+
+#if 0
+    uint8_t total_hits = chassis_count_bits(raw_bits);
+    bool line_detected = (total_hits >= 1U) && (total_hits <= 4U);
+
+    // B. 边缘防干扰判定：使用 0x81U (二进制 1000 0001)，仅要求绝对最外侧的 Bit 7 和 Bit 0 处于灭状态
+    // 这样哪怕姿态稍偏、压在右侧倒数第二个灯（Bit 6 或 Bit 5）上，也能被正常认可！
+    bool edge_clean = (raw_bits & 0x81U) == 0U;
+
+    // C. 如果没有抓到线，或者最外侧踩到了干扰线，重置稳定计数器
+    if (!line_detected || !edge_clean) {
+        chassis->corner_sensor_sequence_step = 0U;
+        return false;
+    }
+
+    // D. 姿态合格（抓到线且边缘干净），开始累加稳定采样次数
+    if (chassis->corner_sensor_sequence_step < UINT8_MAX) {
+        chassis->corner_sensor_sequence_step++;
+    }
+
+    // E. 同时满足“打转暂停时间”和“重新抓线稳定次数”后，退出转弯！
     return (chassis->corner_pivot_pause_elapsed_s >= g_corner_pivot_pause_s) &&
-        (chassis->corner_reacquire_count >= g_corner_reacquire_samples);
+           (chassis->corner_sensor_sequence_step >= 4U);
+#endif
+#endif
 }
 
 static bool chassis_center_reacquired(const chassis_app_t *chassis)
@@ -292,6 +358,7 @@ static void chassis_enter_state(chassis_app_t *chassis, app_line_follow_state_t 
     chassis->line_state = state;
     chassis->line_state_samples = 0U;
 
+    chassis->locked_turn = 0; // 切换状态时强制解除锁定，防止死锁
     if (state == APP_LINE_FOLLOW_TRACK) {
         pid_reset(&chassis->line_pid);
         chassis->line_turn_adjustment = 0.0f;
@@ -304,11 +371,8 @@ static void chassis_update_corner_stop_state(
     float right_speed_rps)
 {
     if ((chassis->line_state != APP_LINE_FOLLOW_CORNER) ||
-        (chassis->line_state_samples < g_corner_dash_samples)) {
-        return;
-    }
-
-    if (chassis->corner_stop_confirm_count >= g_corner_stop_confirm_samples) {
+        (chassis->line_state_samples < g_corner_dash_samples) ||
+        (chassis->corner_stop_confirm_count >= g_corner_stop_confirm_samples)) {
         return;
     }
 
@@ -374,7 +438,7 @@ static void chassis_update_line_state(chassis_app_t *chassis)
     if (chassis->line_state == APP_LINE_FOLLOW_TRACK) {
         corner_candidate = chassis_confirm_corner_candidate(
             chassis,
-            chassis_get_corner_candidate(chassis->line_sensor.raw_bits));
+            chassis_get_corner_candidate(chassis->line_sensor.raw_bits,chassis));
     } else {
         chassis->pending_corner_direction = 0;
         chassis->corner_confirm_count = 0U;
@@ -597,6 +661,8 @@ void app_chassis_control_task(float control_dt_s, float elapsed_s)
     float right_speed;
     float left_ref;
     float right_ref;
+    float left_output;
+    float right_output;
     float line_error;
 
     // encoder_driver_poll(&g_chassis.encoder_driver);
@@ -610,10 +676,17 @@ void app_chassis_control_task(float control_dt_s, float elapsed_s)
     line_error = g_chassis.line_sensor.line_error;
     chassis_get_wheel_targets(&g_chassis, &left_ref, &right_ref);
 
-    motor_dc_set_output(&g_chassis.left_motor,
-        chassis_get_forward_output(&g_chassis.left_speed_pid, left_ref, left_speed));
-    motor_dc_set_output(&g_chassis.right_motor,
-        chassis_get_forward_output(&g_chassis.right_speed_pid, right_ref, right_speed));
+    left_output = chassis_get_forward_output(&g_chassis.left_speed_pid, left_ref, left_speed);
+    right_output = chassis_get_forward_output(&g_chassis.right_speed_pid, right_ref, right_speed);
+
+    if ((g_chassis.line_state == APP_LINE_FOLLOW_TRACK) &&
+        (left_ref > 0.0f) && (right_ref > 0.0f)) {
+        left_output = math_clampf(left_output * g_track_output_boost, 0.0f, 0.95f);
+        right_output = math_clampf(right_output * g_track_output_boost, 0.0f, 0.95f);
+    }
+
+    motor_dc_set_output(&g_chassis.left_motor, left_output);
+    motor_dc_set_output(&g_chassis.right_motor, right_output);
 
     g_chassis.snapshot.left_speed_rps = left_speed;
     g_chassis.snapshot.right_speed_rps = right_speed;
