@@ -153,43 +153,60 @@ static uint8_t chassis_count_bits(uint8_t bits)
 
 static int8_t chassis_get_corner_candidate(uint8_t raw_bits)
 {
+    // static 变量：直角弯方向锁定 (-1:左转中, 1:右转中, 0:未锁)
+    // 作用：防止转弯转到一半，车头甩过去导致传感器误判回打！
+    static int8_t locked_turn = 0; 
+
     uint8_t total_hits = chassis_count_bits(raw_bits);
 
-   // 【补丁】：处理拐弯处粗线导致大量传感器亮灯的情况
-    if (total_hits >= 5U) {
-        bool left_side  = (raw_bits & 0x03U) != 0U;   // 左侧最外侧2个传感器
-        bool right_side = (raw_bits & 0xC0U) != 0U;   // 右侧最外侧2个传感器
-        
-        if (left_side && right_side) {
-            // 左右都压到，可能是非常粗的弯道或暂时性全覆盖
-            // 这里可以选择直行，或者根据之前的方向惯性，但最简单先返回0
-            return 0;
+    // -------------------------------------------------------------
+    // 1. 如果处于直角弯锁定状态，优先检查是否“过弯完成”
+    // -------------------------------------------------------------
+    if (locked_turn != 0) {
+        // 解锁条件：亮灯数恢复到 1~2 个（重回单线），且亮灯集中在中间 (0x3C = 0011 1100)
+        if ((total_hits > 0U) && (total_hits <= 2U) && ((raw_bits & 0x3CU) != 0U)) {
+            locked_turn = 0; // 解锁，恢复正常巡线
+        } else {
+            // 还没完全转过来，坚决保持之前的转向，绝不许中途反打！
+            return locked_turn;
         }
-        
-        if (left_side)  return -1;   // 左侧压线 → 往左转（跟随左弯）
-        if (right_side) return 1;    // 右侧压线 → 往右转（跟随右弯）
-        
-        // 亮灯很多但没有明显压到两侧，可能是完全压在粗线中间
-        return 0;   // 保持直行
     }
 
-    if (total_hits < 3U) {
-        return 0;
-    }
+    // -------------------------------------------------------------
+    // 2. 统计左右半边的灯数
+    // -------------------------------------------------------------
+    // 0x0F (0000 1111) 为左半边 4 个传感器 (Bit 0~3)
+    // 0xF0 (1111 0000) 为右半边 4 个传感器 (Bit 4~7)
+    uint8_t left_hits  = chassis_count_bits(raw_bits & 0x0FU); 
+    uint8_t right_hits = chassis_count_bits(raw_bits & 0xF0U); 
 
-    uint8_t left_hits = chassis_count_bits(raw_bits & LINE_SENSOR_LEFT_HALF_MASK);
-    uint8_t right_hits = chassis_count_bits(raw_bits & LINE_SENSOR_RIGHT_HALF_MASK);
-    bool touches_left_edge = (raw_bits & 0x01U) != 0U;
-    bool touches_right_edge = (raw_bits & 0x80U) != 0U;
+    bool touches_left_edge  = (raw_bits & 0x01U) != 0U; // Bit 0 最左
+    bool touches_right_edge = (raw_bits & 0x80U) != 0U; // Bit 7 最右
 
+    // -------------------------------------------------------------
+    // 3. 优先判定“直角弯特征”（比较左右相对优势，而不是只看极值）
+    // -------------------------------------------------------------
+    // 左直角弯：左半边亮了 3 个及以上，且最左侧触线，且左边数量绝对多于右边
     if (touches_left_edge && (left_hits >= 3U) && (left_hits > right_hits)) {
+        locked_turn = -1; // 锁定左转
         return -1;
     }
-    
+
+    // 右直角弯：右半边亮了 3 个及以上，且最右侧触线，且右边数量绝对多于左边
     if (touches_right_edge && (right_hits >= 3U) && (right_hits > left_hits)) {
+        locked_turn = 1;  // 锁定右转
         return 1;
     }
 
+    // -------------------------------------------------------------
+    // 4. 极粗线/全亮（全黑线或交叉口）保底处理
+    // -------------------------------------------------------------
+    if (total_hits >= 6U) {
+        // 如果之前有锁定，沿用锁定；否则返回 0 保持直行
+        return locked_turn;
+    }
+
+    // 5. 没达到直角弯标准，返回 0，交给普通 PID 或巡线逻辑
     return 0;
 }
 static int8_t chassis_confirm_corner_candidate(chassis_app_t *chassis, int8_t candidate)
