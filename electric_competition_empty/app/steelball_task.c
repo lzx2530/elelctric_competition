@@ -13,15 +13,19 @@
 #define STEELBALL_ACK_MAX_SENDS 3U
 #define STEELBALL_STATUS_PERIOD_MS 100U
 #define STEELBALL_VISION_TIMEOUT_MS 200U
-#define STEELBALL_NEAR_CENTER_TOLERANCE_PERMILLE 80
+#define STEELBALL_NEAR_CENTER_TOLERANCE_PERMILLE 400
 #define STEELBALL_VISUAL_FORWARD_RPS 0.65f
 #define STEELBALL_VISUAL_YAW_GAIN 0.0008f
 #define STEELBALL_VISUAL_YAW_LIMIT_RPS 0.35f
 #define STEELBALL_YAW_SIGN 1.0f
+#define STEELBALL_LED_MAGNET_TEST_MODE 1U
+#define STEELBALL_AUTO_START_ON_BOOT 1U
 #define STEELBALL_NEAR_CREEP_CALIBRATED 0U
-#define STEELBALL_NEAR_CREEP_DISTANCE_MM 0.0f
-#define STEELBALL_NEAR_CREEP_SPEED_RPS 0.25f
-#define STEELBALL_NEAR_CREEP_TIMEOUT_MS 1500U
+/* Test-only path: exercise state 3 before LED magnet proxy state 4. */
+#define STEELBALL_NEAR_CREEP_TEST_MODE 1U
+#define STEELBALL_NEAR_CREEP_DISTANCE_MM 40.0f
+#define STEELBALL_NEAR_CREEP_SPEED_RPS 0.35f
+#define STEELBALL_NEAR_CREEP_TIMEOUT_MS 6000U
 #define STEELBALL_MAGNET_HOLD_MS 300U
 
 #define STEELBALL_FAULT_ACK_TIMEOUT 1U
@@ -50,6 +54,7 @@ typedef struct {
     uint32_t now_ms;
     uint32_t last_status_tx_ms;
     uint32_t last_vision_rx_ms;
+    uint32_t last_link_diag_ms;
     uint32_t magnet_hold_start_ms;
     uint32_t near_start_ms;
     int32_t near_left_start_count;
@@ -63,6 +68,11 @@ typedef struct {
     uint16_t confidence_permille;
     uint8_t stable_frames;
     uint8_t target_count;
+    uint32_t rx_bytes;
+    uint32_t rx_valid_frames;
+    uint32_t rx_valid_vision_frames;
+    uint32_t rx_crc_drops;
+    uint32_t rx_length_drops;
     steelball_parser_t parser;
 } steelball_context_t;
 
@@ -78,19 +88,34 @@ static int16_t steelball_read_i16_le(const uint8_t *data)
     return (int16_t)sb_read_u16_le(data);
 }
 
+static void steelball_set_magnet_output(bool on)
+{
+#if STEELBALL_LED_MAGNET_TEST_MODE
+    bsp_gpio_set_led(on);
+#else
+    bsp_gpio_set_magnet(on);
+#endif
+    g_steelball.magnet_on = on;
+}
+
 static void steelball_set_safe_stop(void)
 {
     app_chassis_stop();
-    bsp_gpio_set_magnet(false);
-    g_steelball.magnet_on = false;
+    steelball_set_magnet_output(false);
 }
 
 static void steelball_enter_fault(uint8_t reason)
 {
-    bsp_uart_debug_printf("steel fault reason=%u state=%u vision=%u flags=0x%02X ball=%u cx=%d now=%lu last=%lu\r\n",
+    if (g_steelball.state == SB_TI_FAULT) {
+        return;
+    }
+    bsp_uart_debug_printf("steel fault reason=%u state=%u vision=%u flags=0x%02X ball=%u cx=%d near=%u now=%lu last=%lu rx=%lu frame=%lu vframe=%lu crc=%lu len=%lu\r\n",
         reason, g_steelball.state, g_steelball.vision_state, g_steelball.vision_flags,
-        g_steelball.ball_diameter_px, g_steelball.center_x_permille,
-        (unsigned long)g_steelball.now_ms, (unsigned long)g_steelball.last_vision_rx_ms);
+        g_steelball.ball_diameter_px, g_steelball.center_x_permille, g_steelball.near_travel_mm,
+        (unsigned long)g_steelball.now_ms, (unsigned long)g_steelball.last_vision_rx_ms,
+        (unsigned long)g_steelball.rx_bytes, (unsigned long)g_steelball.rx_valid_frames,
+        (unsigned long)g_steelball.rx_valid_vision_frames, (unsigned long)g_steelball.rx_crc_drops,
+        (unsigned long)g_steelball.rx_length_drops);
     steelball_set_safe_stop();
     g_steelball.waiting_start_ack = false;
     g_steelball.capture_result = SB_CAPTURE_FAILED;
@@ -206,6 +231,7 @@ static void steelball_handle_frame(const uint8_t *frame, uint8_t length)
         g_steelball.target_count = payload[14];
         /* A frame is trusted only after all framing checks and mission filtering above. */
         g_steelball.last_vision_rx_ms = g_steelball.now_ms;
+        g_steelball.rx_valid_vision_frames++;
     }
 }
 
@@ -215,12 +241,18 @@ void steelball_init(void)
     g_steelball.state = SB_TI_IDLE;
     g_steelball.capture_result = SB_CAPTURE_NONE;
     steelball_set_safe_stop();
+#if STEELBALL_AUTO_START_ON_BOOT
+    /* K230 must already be running; its matching ACK releases line following. */
+    (void) steelball_start_mission();
+    bsp_uart_debug_printf("steel auto start sent\r\n");
+#endif
 }
 
 void steelball_rx_bytes(const uint8_t *data, uint16_t length)
 {
     uint16_t input_index;
 
+    g_steelball.rx_bytes += length;
     for (input_index = 0U; input_index < length; ++input_index) {
         steelball_parser_t *parser = &g_steelball.parser;
         uint8_t byte = data[input_index];
@@ -248,6 +280,7 @@ void steelball_rx_bytes(const uint8_t *data, uint16_t length)
         }
         if (parser->length >= STEELBALL_FRAME_MAX_LENGTH) {
             parser->length = 0U;
+            g_steelball.rx_length_drops++;
             continue;
         }
         parser->bytes[parser->length++] = byte;
@@ -257,6 +290,7 @@ void steelball_rx_bytes(const uint8_t *data, uint16_t length)
         payload_length = parser->bytes[5];
         if (payload_length > SB_MAX_PAYLOAD_LENGTH) {
             parser->length = 0U;
+            g_steelball.rx_length_drops++;
             continue;
         }
         frame_length = (uint8_t)(payload_length + 8U);
@@ -266,7 +300,10 @@ void steelball_rx_bytes(const uint8_t *data, uint16_t length)
         received_crc = sb_read_u16_le(&parser->bytes[6U + payload_length]);
         calculated_crc = sb_crc16_ccitt_false(&parser->bytes[2], (uint16_t)(4U + payload_length));
         if ((parser->bytes[2] == SB_PROTOCOL_VERSION) && (received_crc == calculated_crc)) {
+            g_steelball.rx_valid_frames++;
             steelball_handle_frame(parser->bytes, frame_length);
+        } else {
+            g_steelball.rx_crc_drops++;
         }
         parser->length = 0U;
     }
@@ -288,8 +325,16 @@ bool steelball_start_mission(void)
     g_steelball.vision_state = SB_VISION_READY;
     g_steelball.vision_flags = 0U;
     g_steelball.near_travel_mm = 0U;
+    g_steelball.rx_bytes = 0U;
+    g_steelball.rx_valid_frames = 0U;
+    g_steelball.rx_valid_vision_frames = 0U;
+    g_steelball.rx_crc_drops = 0U;
+    g_steelball.rx_length_drops = 0U;
+    g_steelball.parser.length = 0U;
     g_steelball.state = SB_TI_IDLE;
     g_steelball.start_tx_ms = g_steelball.now_ms;
+    g_steelball.last_vision_rx_ms = g_steelball.now_ms;
+    g_steelball.last_link_diag_ms = g_steelball.now_ms;
     g_steelball.last_status_tx_ms = g_steelball.now_ms - STEELBALL_STATUS_PERIOD_MS;
     steelball_set_safe_stop();
     steelball_send_mission_command(SB_CMD_START);
@@ -349,7 +394,17 @@ void steelball_task_10ms(uint32_t now_ms)
         g_steelball.last_status_tx_ms = now_ms;
     }
 
-    if ((g_steelball.state == SB_TI_VISUAL_APPROACH) &&
+    if (steelball_elapsed(now_ms, g_steelball.last_link_diag_ms, 1000U)) {
+        bsp_uart_debug_printf("[K230 RX] bytes=%lu frame=%lu vframe=%lu crc=%lu len=%lu age=%lu\r\n",
+            (unsigned long)g_steelball.rx_bytes, (unsigned long)g_steelball.rx_valid_frames,
+            (unsigned long)g_steelball.rx_valid_vision_frames, (unsigned long)g_steelball.rx_crc_drops,
+            (unsigned long)g_steelball.rx_length_drops,
+            (unsigned long)(now_ms - g_steelball.last_vision_rx_ms));
+        g_steelball.last_link_diag_ms = now_ms;
+    }
+
+    if (((g_steelball.state == SB_TI_FOLLOW_LINE) ||
+            (g_steelball.state == SB_TI_VISUAL_APPROACH)) &&
         steelball_elapsed(now_ms, g_steelball.last_vision_rx_ms, STEELBALL_VISION_TIMEOUT_MS)) {
         steelball_enter_fault(STEELBALL_FAULT_VISION_TIMEOUT);
         return;
@@ -372,26 +427,28 @@ void steelball_task_10ms(uint32_t now_ms)
                 STEELBALL_VISUAL_YAW_LIMIT_RPS);
             app_chassis_set_external_drive(STEELBALL_VISUAL_FORWARD_RPS, yaw_rps);
             if (steelball_vision_is_near_centered()) {
-#if STEELBALL_NEAR_CREEP_CALIBRATED
+#if (STEELBALL_NEAR_CREEP_CALIBRATED || STEELBALL_NEAR_CREEP_TEST_MODE)
                 app_chassis_get_encoder_counts(&g_steelball.near_left_start_count,
                     &g_steelball.near_right_start_count);
                 g_steelball.near_start_ms = now_ms;
                 g_steelball.state = SB_TI_NEAR_CREEP;
+                bsp_uart_debug_printf("steel near creep: test=%u speed=%.2f distance=%.1f\r\n",
+                    STEELBALL_NEAR_CREEP_TEST_MODE, STEELBALL_NEAR_CREEP_SPEED_RPS,
+                    STEELBALL_NEAR_CREEP_DISTANCE_MM);
 #else
                 steelball_enter_fault(STEELBALL_FAULT_NEAR_UNCALIBRATED);
 #endif
             }
             break;
         case SB_TI_NEAR_CREEP:
-#if STEELBALL_NEAR_CREEP_CALIBRATED
+#if (STEELBALL_NEAR_CREEP_CALIBRATED || STEELBALL_NEAR_CREEP_TEST_MODE)
             g_steelball.near_travel_mm = (uint16_t)app_chassis_get_average_distance_mm(
                 g_steelball.near_left_start_count, g_steelball.near_right_start_count);
             if (steelball_elapsed(now_ms, g_steelball.near_start_ms, STEELBALL_NEAR_CREEP_TIMEOUT_MS)) {
                 steelball_enter_fault(STEELBALL_FAULT_NEAR_TIMEOUT);
             } else if ((float)g_steelball.near_travel_mm >= STEELBALL_NEAR_CREEP_DISTANCE_MM) {
                 app_chassis_stop();
-                bsp_gpio_set_magnet(true);
-                g_steelball.magnet_on = true;
+                steelball_set_magnet_output(true);
                 g_steelball.magnet_hold_start_ms = now_ms;
                 g_steelball.state = SB_TI_MAGNET_HOLD;
             } else {
@@ -410,6 +467,11 @@ void steelball_task_10ms(uint32_t now_ms)
             break;
         case SB_TI_SUCCESS_UNVERIFIED:
             app_chassis_stop();
+            break;
+        case SB_TI_IDLE:
+        case SB_TI_ABORTED:
+        case SB_TI_FAULT:
+            steelball_set_safe_stop();
             break;
         default:
             steelball_enter_fault(STEELBALL_FAULT_INVALID_STATE);

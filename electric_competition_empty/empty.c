@@ -148,22 +148,12 @@ static void run_vehicle_app(void)
     uint32_t last_esp_heartbeat_ms = 0U;
     ringbuf_t *k230_ringbuf;
     static const proto_vofa_firewater_mode_t vofa_mode = PROTO_VOFA_FIREWATER_MODE_NAMED;
-    static const char *const vofa_names[15] = {
-        "line_error",
-        "line_bits",
-        "line_state",
-        "line_lost",
-        "left_target_rps",
-        "right_target_rps",
-        "left_speed_rps",
-        "right_speed_rps",
-        "left_output",
-        "right_output",
+    static const char *const vofa_names[5] = {
         "ball_diameter_px",
         "vision_state",
         "vision_center_x",
-        "vision_flags",
         "vision_stable_frames",
+        "steelball_state",
     };
 
     SYSCFG_DL_init();
@@ -234,39 +224,20 @@ static void run_vehicle_app(void)
             app_ui_refresh(app_chassis_get_snapshot(), app_turret_get_snapshot(), app_imu_get_snapshot());
         }
         if (scheduler_flags.debug_100ms) {
-            const chassis_snapshot_t *chassis = app_chassis_get_snapshot();
             steelball_vision_snapshot_t vision;
             proto_vofa_firewater_packet_t vofa_packet;
-            /* Keep one fixed set of debug variables and switch only the text formatting mode. */
-            float vofa_channels[15] = {
-                chassis->line_error,
-                (float) chassis->line_bits,
-                (float) chassis->line_state,
-                chassis->line_lost ? 1.0f : 0.0f,
-                chassis->left_target_rps,
-                chassis->right_target_rps,
-                chassis->left_speed_rps,
-                chassis->right_speed_rps,
-                chassis->left_output,
-                chassis->right_output,
-                0.0f,
-                0.0f,
-                0.0f,
-                0.0f,
-                0.0f,
-            };
+            float vofa_channels[5] = {0.0f};
             steelball_get_vision_snapshot(&vision);
-            vofa_channels[10] = (float)vision.ball_diameter_px;
-            vofa_channels[11] = (float)vision.vision_state;
-            vofa_channels[12] = (float)vision.center_x_permille;
-            vofa_channels[13] = (float)vision.vision_flags;
-            vofa_channels[14] = (float)vision.stable_frames;
+            vofa_channels[0] = (float)vision.ball_diameter_px;
+            vofa_channels[1] = (float)vision.vision_state;
+            vofa_channels[2] = (float)vision.center_x_permille;
+            vofa_channels[3] = (float)vision.stable_frames;
+            vofa_channels[4] = (float)steelball_get_state();
             vofa_packet.mode = vofa_mode;
             vofa_packet.names = vofa_names;
             vofa_packet.data = vofa_channels;
-            vofa_packet.count = 15U;
+            vofa_packet.count = 5U;
             proto_vofa_firewater_send_packet(&vofa_packet);
-            bsp_gpio_toggle_led();
         }
     }
 }
