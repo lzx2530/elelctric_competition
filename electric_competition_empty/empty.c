@@ -68,7 +68,8 @@ typedef enum {
 } app_run_mode_t;
 
 #define APP_ENABLE_OLED_UI       (0U)
-#define APP_ENABLE_VOFA_STREAM   (0U)
+#define APP_ENABLE_VOFA_STREAM   (1U)
+#define APP_ENABLE_TEXT_DEBUG    (0U)
 
 typedef struct {
     oled_handle_t oled;
@@ -135,7 +136,7 @@ static const char *bringup_test_get_stepper_axis_name(const stepper_handle_t *ha
 
 int main(void)
 {
-    static const app_run_mode_t app_mode = APP_RUN_MODE_LINE_TRACKING_TEST;
+    static const app_run_mode_t app_mode = APP_RUN_MODE_VEHICLE;
 
     if (app_mode == APP_RUN_MODE_BRINGUP_TEST) {
         run_bringup_test();
@@ -159,13 +160,15 @@ static void run_vehicle_app(bool line_tracking_test)
     uint32_t last_chassis_control_tick_ms = 0U;
     uint32_t last_k230_log_tick_ms = 0U;
     uint32_t k230_position_frame_count = 0U;
+#if APP_ENABLE_TEXT_DEBUG
     uint32_t last_abs_pwm_high_ticks = 0U;
     uint32_t last_abs_pwm_period_ticks = 0U;
+#endif
     k230_parser_t k230_parser;
     ringbuf_t *k230_ringbuf;
 #if APP_ENABLE_VOFA_STREAM
-    static const proto_vofa_firewater_mode_t vofa_mode = PROTO_VOFA_FIREWATER_MODE_NAMED;
-    static const char *const vofa_names[10] = {
+    static const proto_vofa_firewater_mode_t vofa_mode = PROTO_VOFA_FIREWATER_MODE_RAW;
+    static const char *const vofa_names[12] = {
         "line_error",
         "line_bits",
         "line_state",
@@ -176,6 +179,8 @@ static void run_vehicle_app(bool line_tracking_test)
         "right_speed_rps",
         "left_output",
         "right_output",
+        "mission_state",
+        "elapsed_s",
     };
 #endif
 
@@ -207,7 +212,9 @@ static void run_vehicle_app(bool line_tracking_test)
 
     NVIC_EnableIRQ(GPIO_ENCODER_INT_IRQN);
 
+#if APP_ENABLE_TEXT_DEBUG
     bsp_uart_debug_printf("system init done; K230 UART2 RX=PB18 115200/8N1\r\n");
+#endif
 
     while (1) {
         k230_frame_t frame;
@@ -237,8 +244,10 @@ static void run_vehicle_app(bool line_tracking_test)
             last_start_press_ms = scheduler_flags.tick_ms;
         }
         if (bsp_operator_input_take_abs_pwm(&high_ticks, &period_ticks)) {
+#if APP_ENABLE_TEXT_DEBUG
             last_abs_pwm_high_ticks = high_ticks;
             last_abs_pwm_period_ticks = period_ticks;
+#endif
             app_ball_control_set_actuator_pwm(high_ticks, period_ticks);
         }
 
@@ -250,8 +259,8 @@ static void run_vehicle_app(bool line_tracking_test)
             } else if (frame.type == K230_PROTOCOL_TYPE_BALL_REPORT) {
                 app_ball_control_set_vision(&frame, scheduler_flags.tick_ms);
                 k230_position_frame_count++;
-                if ((k230_position_frame_count == 1U) ||
-                    ((scheduler_flags.tick_ms - last_k230_log_tick_ms) >= 100U)) {
+                if (APP_ENABLE_TEXT_DEBUG && ((k230_position_frame_count == 1U) ||
+                    ((scheduler_flags.tick_ms - last_k230_log_tick_ms) >= 100U))) {
                     bsp_uart_debug_printf(
                         "[K230] BALL seq=%u flags=0x%02X err=%dmm conf=%u valid=%u stable=%u ref=%u stop=%u\r\n",
                         (unsigned) frame.ball.sequence,
@@ -288,6 +297,7 @@ static void run_vehicle_app(bool line_tracking_test)
                 app_mission_get_snapshot());
         }
         if (scheduler_flags.debug_100ms) {
+#if APP_ENABLE_TEXT_DEBUG
             uint32_t capture_count;
             uint32_t timeout_count;
             uint32_t invalid_count;
@@ -316,11 +326,13 @@ static void run_vehicle_app(bool line_tracking_test)
                 (unsigned long) last_abs_pwm_high_ticks,
                 (unsigned long) last_abs_pwm_period_ticks,
                 (unsigned long) duty_permille);
+#endif
 #if APP_ENABLE_VOFA_STREAM
             const chassis_snapshot_t *chassis = app_chassis_get_snapshot();
             proto_vofa_firewater_packet_t vofa_packet;
             /* Keep one fixed set of debug variables and switch only the text formatting mode. */
-            float vofa_channels[10] = {
+            const mission_snapshot_t *mission = app_mission_get_snapshot();
+            float vofa_channels[12] = {
                 chassis->line_error,
                 (float) chassis->line_bits,
                 (float) chassis->line_state,
@@ -331,11 +343,13 @@ static void run_vehicle_app(bool line_tracking_test)
                 chassis->right_speed_rps,
                 chassis->left_output,
                 chassis->right_output,
+                (float) mission->state,
+                0.001F * (float) mission->elapsed_ms,
             };
             vofa_packet.mode = vofa_mode;
             vofa_packet.names = vofa_names;
             vofa_packet.data = vofa_channels;
-            vofa_packet.count = 10U;
+            vofa_packet.count = 12U;
             proto_vofa_firewater_send_packet(&vofa_packet);
 #endif
             bsp_gpio_toggle_led();

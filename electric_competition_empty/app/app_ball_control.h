@@ -17,10 +17,14 @@ typedef struct {
     bool reference_ready;
     bool stop_requested;
     bool actuator_feedback_valid;
+    bool observer_ready;
     int16_t target_mm;
     int16_t ball_position_mm;
     float ball_velocity_mmps;
+    float estimated_error_mm;
     float tilt_command_rad;
+    float tilt_feedback_rad;
+    float tilt_feedforward_rad;
     float actuator_target;
     float actuator_feedback;
     float stepper_command_hz;

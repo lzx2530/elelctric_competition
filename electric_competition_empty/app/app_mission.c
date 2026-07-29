@@ -9,6 +9,7 @@
 #define APP_MISSION_STATIC_LIMIT_MS            (5000U)
 #define APP_MISSION_LINE_LIMIT_MS              (20000U)
 #define APP_MISSION_BALANCE_LIMIT_MS           (30000U)
+#define APP_MISSION_LINE_CRUISE_SPEED_MPS      (1.53F)
 
 typedef struct {
     mission_snapshot_t snapshot;
@@ -52,7 +53,7 @@ static void mission_begin_running(uint32_t tick_ms)
         mission_stop_outputs();
     } else if (mode == APP_MISSION_LINE_LOOP) {
         app_ball_control_set_enabled(false);
-        app_chassis_set_cruise_speed_mps(0.40F);
+        app_chassis_set_cruise_speed_mps(APP_MISSION_LINE_CRUISE_SPEED_MPS);
         app_chassis_set_enabled(true);
     } else {
         g_mission.snapshot.target_mm = 0;
@@ -155,6 +156,12 @@ void app_mission_task(const imu_snapshot_t *imu, uint32_t tick_ms)
         } else if (g_mission.snapshot.elapsed_ms > APP_MISSION_STATIC_LIMIT_MS) {
             mission_enter_fault(1U);
         }
+        return;
+    }
+
+    if (g_mission.snapshot.mode == APP_MISSION_LINE_LOOP && chassis->start_line_detected) {
+        mission_stop_outputs();
+        g_mission.snapshot.state = APP_MISSION_FINISHED;
         return;
     }
 

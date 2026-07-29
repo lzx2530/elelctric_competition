@@ -1,27 +1,46 @@
 #include "app/app_ball_control.h"
 
-#include "algo/algo_filter.h"
 #include "algo/algo_pid.h"
 #include "common/math_util.h"
 #include "drivers/drv_abs_position.h"
 #include "drivers/drv_stepper.h"
 
 #define APP_BALL_VISION_TIMEOUT_MS       (120U)
-#define APP_BALL_MAX_TILT_RAD            (0.140F)
+#define APP_BALL_CONTROL_PERIOD_S         (0.03333333F)
+#define APP_BALL_CAMERA_DELAY_FRAMES      (2U)
+#define APP_BALL_OBSERVER_HISTORY_LENGTH  (APP_BALL_CAMERA_DELAY_FRAMES)
+#define APP_BALL_MAX_TILT_RAD            (0.104720F)
 #define APP_BALL_NEUTRAL_ACTUATOR        (0.500F)
 #define APP_BALL_ACTUATOR_PER_RAD        (1.250F)
 #define APP_BALL_COMMAND_SIGN            (1.0F)
+#define APP_BALL_G_MPS2                  (9.80665F)
+#define APP_BALL_BETA                    (1.400F)
+#define APP_BALL_KG_MPS2_PER_RAD         (APP_BALL_G_MPS2 / APP_BALL_BETA)
+#define APP_BALL_KP                       (24.150F)
+#define APP_BALL_KD                       (7.950F)
+#define APP_BALL_KI                       (24.500F)
+#define APP_BALL_INTEGRAL_LIMIT_MS        (0.500F)
+#define APP_BALL_KF_K_POSITION            (0.541505F)
+#define APP_BALL_KF_K_VELOCITY            (6.254990F)
+#define APP_BALL_FRICTION_BREAK_RAD       (0.011999F)
+#define APP_BALL_BREAK_ENGAGE_M           (0.0010F)
+#define APP_BALL_BREAK_RELEASE_M          (0.0003F)
+#define APP_BALL_BREAK_GAIN               (1.15F)
 
 typedef struct {
     stepper_handle_t stepper;
     abs_position_handle_t actuator_encoder;
-    pid_handle_t ball_pid;
     pid_handle_t actuator_pid;
-    lpf1_handle_t ball_velocity_filter;
     ball_control_snapshot_t snapshot;
     uint32_t last_vision_tick_ms;
-    int16_t previous_ball_position_mm;
-    bool ball_position_initialized;
+    float delayed_position_mm;
+    float delayed_velocity_mmps;
+    float input_tilt_rad[APP_BALL_OBSERVER_HISTORY_LENGTH];
+    float input_ax_mps2[APP_BALL_OBSERVER_HISTORY_LENGTH];
+    float error_integral_ms;
+    int8_t break_direction;
+    bool observer_initialized;
+    bool vision_sample_pending;
 } ball_control_app_t;
 
 static ball_control_app_t g_ball;
@@ -33,25 +52,6 @@ static const stepper_config_t g_pitch_stepper_cfg = {
     .min_frequency_hz = 5.0F,
     .max_frequency_hz = 4000.0F,
     .accel_hz_per_s = 8000.0F,
-};
-
-static const pid_config_t g_ball_pid_cfg = {
-    .kp = 0.0018F,
-    .ki = 0.0003F,
-    .kd = 0.0009F,
-    .dt_s = 0.01F,
-    .output_limit = APP_BALL_MAX_TILT_RAD,
-    .integral_limit = 0.050F,
-    .integral_separation = 25.0F,
-    .derivative_lpf_alpha = 0.20F,
-    .setpoint_slew_rate = 0.0F,
-    .deadband = 1.0F,
-    .derivative_on_measurement = true,
-    .enable_integral_separation = true,
-    .enable_output_limit = true,
-    .enable_integral_limit = true,
-    .enable_deadband = true,
-    .enable_setpoint_ramp = false,
 };
 
 static const pid_config_t g_actuator_pid_cfg = {
@@ -73,24 +73,98 @@ static const pid_config_t g_actuator_pid_cfg = {
     .enable_setpoint_ramp = false,
 };
 
+static void ball_observer_reset(void)
+{
+    uint8_t index;
+
+    for (index = 0U; index < APP_BALL_OBSERVER_HISTORY_LENGTH; index++) {
+        g_ball.input_tilt_rad[index] = 0.0F;
+        g_ball.input_ax_mps2[index] = 0.0F;
+    }
+    g_ball.delayed_position_mm = 0.0F;
+    g_ball.delayed_velocity_mmps = 0.0F;
+    g_ball.error_integral_ms = 0.0F;
+    g_ball.break_direction = 0;
+    g_ball.observer_initialized = false;
+    g_ball.vision_sample_pending = false;
+    g_ball.snapshot.observer_ready = false;
+    g_ball.snapshot.estimated_error_mm = 0.0F;
+    g_ball.snapshot.ball_velocity_mmps = 0.0F;
+}
+
+static void ball_observer_predict(float *position_mm, float *velocity_mmps,
+    float tilt_rad, float ax_mps2)
+{
+    float acceleration_mps2 = -APP_BALL_KG_MPS2_PER_RAD * tilt_rad -
+        ax_mps2 / APP_BALL_BETA;
+
+    *position_mm += *velocity_mmps * APP_BALL_CONTROL_PERIOD_S +
+        500.0F * acceleration_mps2 * APP_BALL_CONTROL_PERIOD_S * APP_BALL_CONTROL_PERIOD_S;
+    *velocity_mmps += 1000.0F * acceleration_mps2 * APP_BALL_CONTROL_PERIOD_S;
+}
+
+static void ball_observer_correct_and_predict(int16_t measured_error_mm,
+    float *present_position_mm, float *present_velocity_mmps)
+{
+    uint8_t index;
+
+    if (!g_ball.observer_initialized) {
+        g_ball.delayed_position_mm = (float) measured_error_mm;
+        g_ball.delayed_velocity_mmps = 0.0F;
+        g_ball.observer_initialized = true;
+    } else {
+        float innovation = (float) measured_error_mm - g_ball.delayed_position_mm;
+
+        g_ball.delayed_position_mm += APP_BALL_KF_K_POSITION * innovation;
+        g_ball.delayed_velocity_mmps +=
+            APP_BALL_KF_K_VELOCITY * innovation;
+    }
+
+    *present_position_mm = g_ball.delayed_position_mm;
+    *present_velocity_mmps = g_ball.delayed_velocity_mmps;
+    for (index = 0U; index < APP_BALL_OBSERVER_HISTORY_LENGTH; index++) {
+        ball_observer_predict(present_position_mm, present_velocity_mmps,
+            g_ball.input_tilt_rad[index], g_ball.input_ax_mps2[index]);
+    }
+}
+
+static void ball_observer_advance(float tilt_rad, float ax_mps2)
+{
+    uint8_t index;
+
+    /* Keep the delayed state aligned with the next delayed camera frame. */
+    ball_observer_predict(&g_ball.delayed_position_mm, &g_ball.delayed_velocity_mmps,
+        g_ball.input_tilt_rad[0], g_ball.input_ax_mps2[0]);
+    for (index = 0U; index < (APP_BALL_OBSERVER_HISTORY_LENGTH - 1U); index++) {
+        g_ball.input_tilt_rad[index] = g_ball.input_tilt_rad[index + 1U];
+        g_ball.input_ax_mps2[index] = g_ball.input_ax_mps2[index + 1U];
+    }
+    g_ball.input_tilt_rad[APP_BALL_OBSERVER_HISTORY_LENGTH - 1U] = tilt_rad;
+    g_ball.input_ax_mps2[APP_BALL_OBSERVER_HISTORY_LENGTH - 1U] = ax_mps2;
+}
+
 void app_ball_control_init(void)
 {
     stepper_init(&g_ball.stepper, &g_pitch_stepper_cfg);
     stepper_enable(&g_ball.stepper, true);
     abs_position_init(&g_ball.actuator_encoder, 0.02F, 0.98F);
-    pid_init(&g_ball.ball_pid, &g_ball_pid_cfg, PID_MODE_POSITION);
     pid_init(&g_ball.actuator_pid, &g_actuator_pid_cfg, PID_MODE_POSITION);
-    lpf1_init(&g_ball.ball_velocity_filter, 0.25F, 0.0F);
+    ball_observer_reset();
     g_ball.snapshot.target_mm = 0;
     g_ball.snapshot.actuator_target = APP_BALL_NEUTRAL_ACTUATOR;
 }
 
 void app_ball_control_set_enabled(bool enabled)
 {
+    bool was_enabled = g_ball.snapshot.enabled;
+
     g_ball.snapshot.enabled = enabled;
-    if (!enabled) {
-        pid_reset(&g_ball.ball_pid);
+    if (!enabled || !was_enabled) {
         pid_reset(&g_ball.actuator_pid);
+        ball_observer_reset();
+        g_ball.snapshot.tilt_command_rad = 0.0F;
+        g_ball.snapshot.tilt_feedback_rad = 0.0F;
+        g_ball.snapshot.tilt_feedforward_rad = 0.0F;
         g_ball.snapshot.actuator_target = APP_BALL_NEUTRAL_ACTUATOR;
     }
 }
@@ -116,18 +190,10 @@ void app_ball_control_set_vision(const k230_frame_t *frame, uint32_t tick_ms)
         return;
     }
 
-    if (g_ball.ball_position_initialized) {
-        float velocity = ((float) frame->ball.position_mm -
-            (float) g_ball.previous_ball_position_mm) / 0.033F;
-        g_ball.snapshot.ball_velocity_mmps = lpf1_update(&g_ball.ball_velocity_filter, velocity);
-    } else {
-        g_ball.ball_position_initialized = true;
-        lpf1_init(&g_ball.ball_velocity_filter, 0.25F, 0.0F);
-    }
-
-    g_ball.previous_ball_position_mm = frame->ball.position_mm;
+    /* K230 sends ball_position - current_target, so zero is always the control setpoint. */
     g_ball.snapshot.ball_position_mm = frame->ball.position_mm;
     g_ball.last_vision_tick_ms = tick_ms;
+    g_ball.vision_sample_pending = true;
 }
 
 void app_ball_control_reset_vision(void)
@@ -137,10 +203,8 @@ void app_ball_control_reset_vision(void)
     g_ball.snapshot.reference_ready = false;
     g_ball.snapshot.stop_requested = false;
     g_ball.snapshot.ball_position_mm = 0;
-    g_ball.snapshot.ball_velocity_mmps = 0.0F;
     g_ball.last_vision_tick_ms = 0U;
-    g_ball.ball_position_initialized = false;
-    lpf1_init(&g_ball.ball_velocity_filter, 0.25F, 0.0F);
+    ball_observer_reset();
 }
 
 void app_ball_control_set_actuator_pwm(uint32_t high_ticks, uint32_t period_ticks)
@@ -152,9 +216,14 @@ void app_ball_control_set_actuator_pwm(uint32_t high_ticks, uint32_t period_tick
 
 void app_ball_control_outer_task(const imu_snapshot_t *imu, uint32_t tick_ms)
 {
-    float feedback;
-    float feedforward;
-    float tilt_command;
+    float ax_mps2;
+    float error_m;
+    float velocity_error_mps;
+    float desired_accel_mps2;
+    float unsaturated_tilt_rad;
+    float tilt_command_rad;
+    float estimated_error_mm;
+    float estimated_velocity_mmps;
 
     if (!g_ball.snapshot.enabled) {
         return;
@@ -168,18 +237,54 @@ void app_ball_control_outer_task(const imu_snapshot_t *imu, uint32_t tick_ms)
         g_ball.snapshot.fault = APP_BALL_FAULT_VISION_TIMEOUT;
         return;
     }
+    if (!g_ball.vision_sample_pending) {
+        return;
+    }
 
-    feedback = (float) g_ball.snapshot.ball_position_mm;
-    tilt_command = APP_BALL_COMMAND_SIGN * pid_update(&g_ball.ball_pid,
-        (float) g_ball.snapshot.target_mm, feedback);
-    feedforward = imu != NULL && imu->online ?
-        math_clampf(-imu->longitudinal_accel_mps2 / 9.80665F,
-            -APP_BALL_MAX_TILT_RAD, APP_BALL_MAX_TILT_RAD) : 0.0F;
-    tilt_command = math_clampf(tilt_command + feedforward,
+    ax_mps2 = imu != NULL && imu->online ? imu->longitudinal_accel_mps2 : 0.0F;
+    ball_observer_correct_and_predict(g_ball.snapshot.ball_position_mm,
+        &estimated_error_mm, &estimated_velocity_mmps);
+    g_ball.vision_sample_pending = false;
+
+    g_ball.snapshot.observer_ready = g_ball.observer_initialized;
+    g_ball.snapshot.estimated_error_mm = estimated_error_mm;
+    g_ball.snapshot.ball_velocity_mmps = estimated_velocity_mmps;
+
+    error_m = -0.001F * estimated_error_mm;
+    velocity_error_mps = -0.001F * estimated_velocity_mmps;
+    desired_accel_mps2 = APP_BALL_KP * error_m + APP_BALL_KD * velocity_error_mps +
+        APP_BALL_KI * g_ball.error_integral_ms;
+    g_ball.snapshot.tilt_feedback_rad = -desired_accel_mps2 * APP_BALL_BETA / APP_BALL_G_MPS2;
+    g_ball.snapshot.tilt_feedforward_rad = math_clampf(-ax_mps2 / APP_BALL_G_MPS2,
         -APP_BALL_MAX_TILT_RAD, APP_BALL_MAX_TILT_RAD);
-    g_ball.snapshot.tilt_command_rad = tilt_command;
+
+    if (g_ball.break_direction == 0) {
+        if (math_absf(error_m) > APP_BALL_BREAK_ENGAGE_M) {
+            g_ball.break_direction = error_m > 0.0F ? 1 : -1;
+        }
+    } else if (((error_m > 0.0F ? 1 : (error_m < 0.0F ? -1 : 0)) != g_ball.break_direction) ||
+        (math_absf(error_m) < APP_BALL_BREAK_RELEASE_M)) {
+        g_ball.break_direction = 0;
+    }
+
+    if (g_ball.break_direction != 0) {
+        g_ball.snapshot.tilt_feedforward_rad -= (float) g_ball.break_direction *
+            APP_BALL_BREAK_GAIN * APP_BALL_FRICTION_BREAK_RAD;
+    }
+    unsaturated_tilt_rad = g_ball.snapshot.tilt_feedback_rad +
+        g_ball.snapshot.tilt_feedforward_rad;
+    tilt_command_rad = math_clampf(unsaturated_tilt_rad,
+        -APP_BALL_MAX_TILT_RAD, APP_BALL_MAX_TILT_RAD);
+    if ((tilt_command_rad == unsaturated_tilt_rad) ||
+        (error_m * (unsaturated_tilt_rad - tilt_command_rad) < 0.0F)) {
+        g_ball.error_integral_ms += error_m * APP_BALL_CONTROL_PERIOD_S;
+        g_ball.error_integral_ms = math_clampf(g_ball.error_integral_ms,
+            -APP_BALL_INTEGRAL_LIMIT_MS, APP_BALL_INTEGRAL_LIMIT_MS);
+    }
+    g_ball.snapshot.tilt_command_rad = tilt_command_rad;
     g_ball.snapshot.actuator_target = math_clampf(APP_BALL_NEUTRAL_ACTUATOR +
-        APP_BALL_ACTUATOR_PER_RAD * tilt_command, 0.05F, 0.95F);
+        APP_BALL_COMMAND_SIGN * APP_BALL_ACTUATOR_PER_RAD * tilt_command_rad, 0.05F, 0.95F);
+    ball_observer_advance(APP_BALL_COMMAND_SIGN * tilt_command_rad, ax_mps2);
     g_ball.snapshot.fault = APP_BALL_FAULT_NONE;
 }
 
