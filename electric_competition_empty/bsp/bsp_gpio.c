@@ -6,7 +6,7 @@ void bsp_gpio_init(void)
 {
     bsp_gpio_set_led(false);
     bsp_gpio_set_motor_dir(true, true);
-    bsp_gpio_set_turret_dir(true, true);
+    bsp_gpio_set_dir_output(BSP_DIR_PITCH, true);
     bsp_gpio_set_laser(false);
     bsp_gpio_set_buzzer(false);
 }
@@ -31,12 +31,6 @@ void bsp_gpio_set_motor_dir(bool left_forward, bool right_forward)
     bsp_gpio_set_dir_output(BSP_DIR_RIGHT, right_forward);
 }
 
-void bsp_gpio_set_turret_dir(bool yaw_positive, bool pitch_positive)
-{
-    bsp_gpio_set_dir_output(BSP_DIR_YAW, yaw_positive);
-    bsp_gpio_set_dir_output(BSP_DIR_PITCH, pitch_positive);
-}
-
 void bsp_gpio_set_dir_output(bsp_dir_output_t output, bool high)
 {
     GPIO_Regs *port = GPIOA;
@@ -51,10 +45,6 @@ void bsp_gpio_set_dir_output(bsp_dir_output_t output, bool high)
         case BSP_DIR_RIGHT:
             port = GPIO_MOTOR_PORT;
             pin = GPIO_MOTOR_DIR_RIGHT_PIN;
-            break;
-        case BSP_DIR_YAW:
-            port = GPIO_TURRET_PORT;
-            pin = GPIO_TURRET_DIR_YAW_PIN;
             break;
         case BSP_DIR_PITCH:
             port = GPIO_TURRET_PORT;

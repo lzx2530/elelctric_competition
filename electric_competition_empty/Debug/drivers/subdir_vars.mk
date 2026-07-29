@@ -6,6 +6,7 @@ SHELL = cmd.exe
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../drivers/drv_abs_position.c \
 ../drivers/drv_encoder_ab.c \
 ../drivers/drv_line_sensor.c \
 ../drivers/drv_motor_dc.c \
@@ -14,6 +15,7 @@ C_SRCS += \
 ../drivers/drv_stepper.c 
 
 C_DEPS += \
+./drivers/drv_abs_position.d \
 ./drivers/drv_encoder_ab.d \
 ./drivers/drv_line_sensor.d \
 ./drivers/drv_motor_dc.d \
@@ -22,6 +24,7 @@ C_DEPS += \
 ./drivers/drv_stepper.d 
 
 OBJS += \
+./drivers/drv_abs_position.o \
 ./drivers/drv_encoder_ab.o \
 ./drivers/drv_line_sensor.o \
 ./drivers/drv_motor_dc.o \
@@ -30,6 +33,7 @@ OBJS += \
 ./drivers/drv_stepper.o 
 
 OBJS__QUOTED += \
+"drivers\drv_abs_position.o" \
 "drivers\drv_encoder_ab.o" \
 "drivers\drv_line_sensor.o" \
 "drivers\drv_motor_dc.o" \
@@ -38,6 +42,7 @@ OBJS__QUOTED += \
 "drivers\drv_stepper.o" 
 
 C_DEPS__QUOTED += \
+"drivers\drv_abs_position.d" \
 "drivers\drv_encoder_ab.d" \
 "drivers\drv_line_sensor.d" \
 "drivers\drv_motor_dc.d" \
@@ -46,6 +51,7 @@ C_DEPS__QUOTED += \
 "drivers\drv_stepper.d" 
 
 C_SRCS__QUOTED += \
+"../drivers/drv_abs_position.c" \
 "../drivers/drv_encoder_ab.c" \
 "../drivers/drv_line_sensor.c" \
 "../drivers/drv_motor_dc.c" \

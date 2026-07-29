@@ -9,8 +9,7 @@ typedef enum {
 } bsp_motor_pwm_t;
 
 typedef enum {
-    BSP_STEPPER_AXIS_YAW = 0,
-    BSP_STEPPER_AXIS_PITCH,
+    BSP_STEPPER_AXIS_PITCH = 0,
 } bsp_stepper_axis_t;
 
 void bsp_pwm_init(void);

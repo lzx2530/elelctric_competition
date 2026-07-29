@@ -39,7 +39,7 @@ void app_control_scheduler_on_tick_isr(void)
     if ((g_scheduler.tick_ms % 10U) == 0U) {
         g_scheduler.imu_10ms = true;
     }
-    if ((g_scheduler.tick_ms % 50U) == 0U) {
+    if ((g_scheduler.tick_ms % 100U) == 0U) {
         g_scheduler.oled_50ms = true;
     }
     if ((g_scheduler.tick_ms % 100U) == 0U) {

@@ -4,6 +4,8 @@
 #include "bsp/bsp_gpio.h"
 #include "drivers/drv_stepper.h"
 
+#if defined(PWM_STEP_YAW_INST)
+
 typedef struct {
     stepper_handle_t yaw_stepper;
     stepper_handle_t pitch_stepper;
@@ -99,3 +101,5 @@ const turret_snapshot_t *app_turret_get_snapshot(void)
 {
     return &g_turret.snapshot;
 }
+
+#endif

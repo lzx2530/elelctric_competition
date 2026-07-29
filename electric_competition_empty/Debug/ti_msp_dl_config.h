@@ -113,18 +113,6 @@ extern "C" {
 #define GPIO_PWM_MOTOR_RIGHT_C1_IOMUX_FUNC             IOMUX_PINCM45_PF_TIMG7_CCP1
 #define GPIO_PWM_MOTOR_RIGHT_C1_IDX                          DL_TIMER_CC_1_INDEX
 
-/* Defines for PWM_STEP_YAW */
-#define PWM_STEP_YAW_INST                                                  TIMA0
-#define PWM_STEP_YAW_INST_IRQHandler                            TIMA0_IRQHandler
-#define PWM_STEP_YAW_INST_INT_IRQN                              (TIMA0_INT_IRQn)
-#define PWM_STEP_YAW_INST_CLK_FREQ                                      32000000
-/* GPIO defines for channel 0 */
-#define GPIO_PWM_STEP_YAW_C0_PORT                                          GPIOA
-#define GPIO_PWM_STEP_YAW_C0_PIN                                   DL_GPIO_PIN_8
-#define GPIO_PWM_STEP_YAW_C0_IOMUX                               (IOMUX_PINCM19)
-#define GPIO_PWM_STEP_YAW_C0_IOMUX_FUNC              IOMUX_PINCM19_PF_TIMA0_CCP0
-#define GPIO_PWM_STEP_YAW_C0_IDX                             DL_TIMER_CC_0_INDEX
-
 /* Defines for PWM_STEP_PITCH */
 #define PWM_STEP_PITCH_INST                                                TIMG0
 #define PWM_STEP_PITCH_INST_IRQHandler                          TIMG0_IRQHandler
@@ -136,6 +124,21 @@ extern "C" {
 #define GPIO_PWM_STEP_PITCH_C0_IOMUX                             (IOMUX_PINCM34)
 #define GPIO_PWM_STEP_PITCH_C0_IOMUX_FUNC             IOMUX_PINCM34_PF_TIMG0_CCP0
 #define GPIO_PWM_STEP_PITCH_C0_IDX                           DL_TIMER_CC_0_INDEX
+
+
+
+/* Defines for CAPTURE_ABS_PWM */
+#define CAPTURE_ABS_PWM_INST                                             (TIMA0)
+#define CAPTURE_ABS_PWM_INST_IRQHandler                         TIMA0_IRQHandler
+#define CAPTURE_ABS_PWM_INST_INT_IRQN                           (TIMA0_INT_IRQn)
+#define CAPTURE_ABS_PWM_INST_LOAD_VALUE                                 (19999U)
+/* GPIO defines for channel 0 */
+#define GPIO_CAPTURE_ABS_PWM_C0_PORT                                       GPIOA
+#define GPIO_CAPTURE_ABS_PWM_C0_PIN                                DL_GPIO_PIN_8
+#define GPIO_CAPTURE_ABS_PWM_C0_IOMUX                            (IOMUX_PINCM19)
+#define GPIO_CAPTURE_ABS_PWM_C0_IOMUX_FUNC             IOMUX_PINCM19_PF_TIMA0_CCP0
+
+
 
 
 
@@ -218,9 +221,6 @@ extern "C" {
 /* Port definition for Pin Group GPIO_TURRET */
 #define GPIO_TURRET_PORT                                                 (GPIOB)
 
-/* Defines for DIR_YAW: GPIOB.12 with pinCMx 29 on package pin 64 */
-#define GPIO_TURRET_DIR_YAW_PIN                                 (DL_GPIO_PIN_12)
-#define GPIO_TURRET_DIR_YAW_IOMUX                                (IOMUX_PINCM29)
 /* Defines for DIR_PITCH: GPIOB.15 with pinCMx 32 on package pin 3 */
 #define GPIO_TURRET_DIR_PITCH_PIN                               (DL_GPIO_PIN_15)
 #define GPIO_TURRET_DIR_PITCH_IOMUX                              (IOMUX_PINCM32)
@@ -284,6 +284,15 @@ extern "C" {
 #define GPIO_ENCODER_ENC_R_B_IIDX                            (DL_GPIO_IIDX_DIO4)
 #define GPIO_ENCODER_ENC_R_B_PIN                                 (DL_GPIO_PIN_4)
 #define GPIO_ENCODER_ENC_R_B_IOMUX                               (IOMUX_PINCM17)
+/* Port definition for Pin Group GPIO_BUTTONS */
+#define GPIO_BUTTONS_PORT                                                (GPIOB)
+
+/* Defines for MODE: GPIOB.12 with pinCMx 29 on package pin 64 */
+#define GPIO_BUTTONS_MODE_PIN                                   (DL_GPIO_PIN_12)
+#define GPIO_BUTTONS_MODE_IOMUX                                  (IOMUX_PINCM29)
+/* Defines for START: GPIOB.7 with pinCMx 24 on package pin 59 */
+#define GPIO_BUTTONS_START_PIN                                   (DL_GPIO_PIN_7)
+#define GPIO_BUTTONS_START_IOMUX                                 (IOMUX_PINCM24)
 
 
 /* clang-format on */
@@ -294,8 +303,8 @@ void SYSCFG_DL_GPIO_init(void);
 void SYSCFG_DL_SYSCTL_init(void);
 void SYSCFG_DL_PWM_MOTOR_LEFT_init(void);
 void SYSCFG_DL_PWM_MOTOR_RIGHT_init(void);
-void SYSCFG_DL_PWM_STEP_YAW_init(void);
 void SYSCFG_DL_PWM_STEP_PITCH_init(void);
+void SYSCFG_DL_CAPTURE_ABS_PWM_init(void);
 void SYSCFG_DL_TIMER_CTRL_1KHZ_init(void);
 void SYSCFG_DL_I2C_SENSOR_BUS_init(void);
 void SYSCFG_DL_UART_DEBUG_init(void);

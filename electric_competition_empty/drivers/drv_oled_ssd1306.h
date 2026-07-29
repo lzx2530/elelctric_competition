@@ -27,6 +27,7 @@ void oled_write_str(oled_handle_t *handle, const char *str);
 void oled_printf(oled_handle_t *handle, uint8_t x, uint8_t y, const char *fmt, ...);
 /* 把本地 framebuffer 刷到屏上；只有 dirty 时才真正发数据 */
 status_t oled_flush(oled_handle_t *handle);
+status_t oled_flush_pages(oled_handle_t *handle, uint8_t first_page, uint8_t page_count);
 status_t oled_get_last_status(void);
 uint8_t oled_get_last_failed_command(void);
 uint8_t oled_get_last_failed_index(void);

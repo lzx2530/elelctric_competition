@@ -7,19 +7,22 @@
 #define STEP_PWM_MIN_COUNTS        (64U)
 #define TIMER_CLOCK_HZ             (32000000.0f)
 
-static float g_step_frequency_hz[2];
+static float g_step_frequency_hz[1];
 
 static void bsp_pwm_set_motor_compare(GPTIMER_Regs *inst, DL_TIMER_CC_INDEX cc_index, uint32_t compare)
 {
     DL_TimerG_setCaptureCompareValue(inst, compare, cc_index);
 }
 
+#if defined(PWM_STEP_YAW_INST)
 static void bsp_pwm_set_step_counts_yaw(uint32_t period_counts)
 {
     /* STEP 信号用 50% 占空比，便于外部步进驱动器稳定识别脉冲。 */
     DL_TimerA_setLoadValue(PWM_STEP_YAW_INST, period_counts - 1U);
     DL_TimerA_setCaptureCompareValue(PWM_STEP_YAW_INST, period_counts / 2U, DL_TIMER_CC_0_INDEX);
 }
+
+#endif
 
 static void bsp_pwm_set_step_counts_pitch(uint32_t period_counts)
 {
@@ -29,11 +32,9 @@ static void bsp_pwm_set_step_counts_pitch(uint32_t period_counts)
 
 void bsp_pwm_init(void)
 {
-    g_step_frequency_hz[BSP_STEPPER_AXIS_YAW] = 0.0f;
     g_step_frequency_hz[BSP_STEPPER_AXIS_PITCH] = 0.0f;
     bsp_pwm_set_motor_bridge(BSP_MOTOR_PWM_LEFT, 0.0f, 0.0f);
     bsp_pwm_set_motor_bridge(BSP_MOTOR_PWM_RIGHT, 0.0f, 0.0f);
-    bsp_pwm_stop_step(BSP_STEPPER_AXIS_YAW);
     bsp_pwm_stop_step(BSP_STEPPER_AXIS_PITCH);
 }
 
@@ -85,11 +86,6 @@ void bsp_pwm_set_step_frequency(bsp_stepper_axis_t axis, float frequency_hz)
     }
 
     switch (axis) {
-        case BSP_STEPPER_AXIS_YAW:
-            bsp_pwm_set_step_counts_yaw(period_counts);
-            DL_TimerA_startCounter(PWM_STEP_YAW_INST);
-            g_step_frequency_hz[axis] = TIMER_CLOCK_HZ / (float) period_counts;
-            break;
         case BSP_STEPPER_AXIS_PITCH:
             bsp_pwm_set_step_counts_pitch(period_counts);
             DL_TimerG_startCounter(PWM_STEP_PITCH_INST);
@@ -103,9 +99,6 @@ void bsp_pwm_set_step_frequency(bsp_stepper_axis_t axis, float frequency_hz)
 void bsp_pwm_stop_step(bsp_stepper_axis_t axis)
 {
     switch (axis) {
-        case BSP_STEPPER_AXIS_YAW:
-            DL_TimerA_stopCounter(PWM_STEP_YAW_INST);
-            break;
         case BSP_STEPPER_AXIS_PITCH:
             DL_TimerG_stopCounter(PWM_STEP_PITCH_INST);
             break;

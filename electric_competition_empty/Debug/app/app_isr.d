@@ -35,6 +35,7 @@ app/app_isr.o: ../app/app_isr.c \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_sysctl.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/sysctl/hw_sysctl_mspm0g1x0x_g3x0x.h \
  D:/ccs/elelctric_competition/electric_competition_empty/app/app_control_scheduler.h \
+ D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_operator_input.h \
  D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_uart.h \
  D:/ccs/elelctric_competition/electric_competition_empty/common/ringbuf.h \
  ti_msp_dl_config.h \
@@ -124,6 +125,7 @@ D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_d
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_sysctl.h:
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/sysctl/hw_sysctl_mspm0g1x0x_g3x0x.h:
 D:/ccs/elelctric_competition/electric_competition_empty/app/app_control_scheduler.h:
+D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_operator_input.h:
 D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_uart.h:
 D:/ccs/elelctric_competition/electric_competition_empty/common/ringbuf.h:
 ti_msp_dl_config.h:

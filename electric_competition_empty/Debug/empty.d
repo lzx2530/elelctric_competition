@@ -33,20 +33,21 @@ empty.o: ../empty.c ../app/app_chassis.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_debugss.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_sysctl.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/sysctl/hw_sysctl_mspm0g1x0x_g3x0x.h \
- ../app/app_control_scheduler.h ../app/app_imu.h ../app/app_isr.h \
- ../app/app_turret.h \
+ ../app/app_ball_control.h \
+ D:/ccs/elelctric_competition/electric_competition_empty/app/app_imu.h \
  D:/ccs/elelctric_competition/electric_competition_empty/protocol/proto_k230.h \
  D:/ccs/elelctric_competition/electric_competition_empty/common/ringbuf.h \
- ../app/app_ui.h \
+ ../app/app_control_scheduler.h ../app/app_imu.h ../app/app_isr.h \
+ ../app/app_mission.h ../app/app_ui.h \
  D:/ccs/elelctric_competition/electric_competition_empty/app/app_chassis.h \
- D:/ccs/elelctric_competition/electric_competition_empty/app/app_imu.h \
- D:/ccs/elelctric_competition/electric_competition_empty/app/app_turret.h \
+ D:/ccs/elelctric_competition/electric_competition_empty/app/app_ball_control.h \
+ D:/ccs/elelctric_competition/electric_competition_empty/app/app_mission.h \
  ../algo/algo_filter.h ../algo/algo_fusion.h ../algo/algo_pid.h \
  ../bsp/bsp_gpio.h ../bsp/bsp_i2c.h \
  D:/ccs/elelctric_competition/electric_competition_empty/common/status.h \
- ../bsp/bsp_pwm.h ../bsp/bsp_uart.h ../common/math_util.h \
- ../drivers/drv_encoder_ab.h ../drivers/drv_line_sensor.h \
- ../drivers/drv_motor_dc.h \
+ ../bsp/bsp_operator_input.h ../bsp/bsp_pwm.h ../bsp/bsp_uart.h \
+ ../common/math_util.h ../drivers/drv_encoder_ab.h \
+ ../drivers/drv_line_sensor.h ../drivers/drv_motor_dc.h \
  D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_pwm.h \
  ../drivers/drv_mpu9250.h ../drivers/drv_oled_ssd1306.h \
  ../drivers/drv_stepper.h \
@@ -138,22 +139,25 @@ D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_c
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_debugss.h:
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_sysctl.h:
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/sysctl/hw_sysctl_mspm0g1x0x_g3x0x.h:
+../app/app_ball_control.h:
+D:/ccs/elelctric_competition/electric_competition_empty/app/app_imu.h:
+D:/ccs/elelctric_competition/electric_competition_empty/protocol/proto_k230.h:
+D:/ccs/elelctric_competition/electric_competition_empty/common/ringbuf.h:
 ../app/app_control_scheduler.h:
 ../app/app_imu.h:
 ../app/app_isr.h:
-../app/app_turret.h:
-D:/ccs/elelctric_competition/electric_competition_empty/protocol/proto_k230.h:
-D:/ccs/elelctric_competition/electric_competition_empty/common/ringbuf.h:
+../app/app_mission.h:
 ../app/app_ui.h:
 D:/ccs/elelctric_competition/electric_competition_empty/app/app_chassis.h:
-D:/ccs/elelctric_competition/electric_competition_empty/app/app_imu.h:
-D:/ccs/elelctric_competition/electric_competition_empty/app/app_turret.h:
+D:/ccs/elelctric_competition/electric_competition_empty/app/app_ball_control.h:
+D:/ccs/elelctric_competition/electric_competition_empty/app/app_mission.h:
 ../algo/algo_filter.h:
 ../algo/algo_fusion.h:
 ../algo/algo_pid.h:
 ../bsp/bsp_gpio.h:
 ../bsp/bsp_i2c.h:
 D:/ccs/elelctric_competition/electric_competition_empty/common/status.h:
+../bsp/bsp_operator_input.h:
 ../bsp/bsp_pwm.h:
 ../bsp/bsp_uart.h:
 ../common/math_util.h:

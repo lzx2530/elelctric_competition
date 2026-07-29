@@ -35,10 +35,11 @@ app/app_ui.o: ../app/app_ui.c \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_debugss.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_sysctl.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/sysctl/hw_sysctl_mspm0g1x0x_g3x0x.h \
+ D:/ccs/elelctric_competition/electric_competition_empty/app/app_ball_control.h \
  D:/ccs/elelctric_competition/electric_competition_empty/app/app_imu.h \
- D:/ccs/elelctric_competition/electric_competition_empty/app/app_turret.h \
  D:/ccs/elelctric_competition/electric_competition_empty/protocol/proto_k230.h \
  D:/ccs/elelctric_competition/electric_competition_empty/common/ringbuf.h \
+ D:/ccs/elelctric_competition/electric_competition_empty/app/app_mission.h \
  D:/ccs/elelctric_competition/electric_competition_empty/drivers/drv_oled_ssd1306.h \
  D:/ccs/elelctric_competition/electric_competition_empty/common/status.h
 D:/ccs/elelctric_competition/electric_competition_empty/app/app_ui.h:
@@ -75,9 +76,10 @@ D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_c
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_debugss.h:
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/hw_sysctl.h:
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/peripherals/m0p/sysctl/hw_sysctl_mspm0g1x0x_g3x0x.h:
+D:/ccs/elelctric_competition/electric_competition_empty/app/app_ball_control.h:
 D:/ccs/elelctric_competition/electric_competition_empty/app/app_imu.h:
-D:/ccs/elelctric_competition/electric_competition_empty/app/app_turret.h:
 D:/ccs/elelctric_competition/electric_competition_empty/protocol/proto_k230.h:
 D:/ccs/elelctric_competition/electric_competition_empty/common/ringbuf.h:
+D:/ccs/elelctric_competition/electric_competition_empty/app/app_mission.h:
 D:/ccs/elelctric_competition/electric_competition_empty/drivers/drv_oled_ssd1306.h:
 D:/ccs/elelctric_competition/electric_competition_empty/common/status.h:

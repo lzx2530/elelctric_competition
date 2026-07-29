@@ -41,7 +41,7 @@
 #include "ti_msp_dl_config.h"
 
 DL_TimerG_backupConfig gPWM_MOTOR_RIGHTBackup;
-DL_TimerA_backupConfig gPWM_STEP_YAWBackup;
+DL_TimerA_backupConfig gCAPTURE_ABS_PWMBackup;
 DL_TimerA_backupConfig gTIMER_CTRL_1KHZBackup;
 
 /*
@@ -56,15 +56,15 @@ SYSCONFIG_WEAK void SYSCFG_DL_init(void)
     SYSCFG_DL_SYSCTL_init();
     SYSCFG_DL_PWM_MOTOR_LEFT_init();
     SYSCFG_DL_PWM_MOTOR_RIGHT_init();
-    SYSCFG_DL_PWM_STEP_YAW_init();
     SYSCFG_DL_PWM_STEP_PITCH_init();
+    SYSCFG_DL_CAPTURE_ABS_PWM_init();
     SYSCFG_DL_TIMER_CTRL_1KHZ_init();
     SYSCFG_DL_I2C_SENSOR_BUS_init();
     SYSCFG_DL_UART_DEBUG_init();
     SYSCFG_DL_UART_K230_init();
     /* Ensure backup structures have no valid state */
 	gPWM_MOTOR_RIGHTBackup.backupRdy 	= false;
-	gPWM_STEP_YAWBackup.backupRdy 	= false;
+	gCAPTURE_ABS_PWMBackup.backupRdy 	= false;
 	gTIMER_CTRL_1KHZBackup.backupRdy 	= false;
 
 
@@ -78,7 +78,7 @@ SYSCONFIG_WEAK bool SYSCFG_DL_saveConfiguration(void)
     bool retStatus = true;
 
 	retStatus &= DL_TimerG_saveConfiguration(PWM_MOTOR_RIGHT_INST, &gPWM_MOTOR_RIGHTBackup);
-	retStatus &= DL_TimerA_saveConfiguration(PWM_STEP_YAW_INST, &gPWM_STEP_YAWBackup);
+	retStatus &= DL_TimerA_saveConfiguration(CAPTURE_ABS_PWM_INST, &gCAPTURE_ABS_PWMBackup);
 	retStatus &= DL_TimerA_saveConfiguration(TIMER_CTRL_1KHZ_INST, &gTIMER_CTRL_1KHZBackup);
 
     return retStatus;
@@ -90,7 +90,7 @@ SYSCONFIG_WEAK bool SYSCFG_DL_restoreConfiguration(void)
     bool retStatus = true;
 
 	retStatus &= DL_TimerG_restoreConfiguration(PWM_MOTOR_RIGHT_INST, &gPWM_MOTOR_RIGHTBackup, false);
-	retStatus &= DL_TimerA_restoreConfiguration(PWM_STEP_YAW_INST, &gPWM_STEP_YAWBackup, false);
+	retStatus &= DL_TimerA_restoreConfiguration(CAPTURE_ABS_PWM_INST, &gCAPTURE_ABS_PWMBackup, false);
 	retStatus &= DL_TimerA_restoreConfiguration(TIMER_CTRL_1KHZ_INST, &gTIMER_CTRL_1KHZBackup, false);
 
     return retStatus;
@@ -102,8 +102,8 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_GPIO_reset(GPIOB);
     DL_TimerG_reset(PWM_MOTOR_LEFT_INST);
     DL_TimerG_reset(PWM_MOTOR_RIGHT_INST);
-    DL_TimerA_reset(PWM_STEP_YAW_INST);
     DL_TimerG_reset(PWM_STEP_PITCH_INST);
+    DL_TimerA_reset(CAPTURE_ABS_PWM_INST);
     DL_TimerA_reset(TIMER_CTRL_1KHZ_INST);
     DL_I2C_reset(I2C_SENSOR_BUS_INST);
     DL_UART_Main_reset(UART_DEBUG_INST);
@@ -113,8 +113,8 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_GPIO_enablePower(GPIOB);
     DL_TimerG_enablePower(PWM_MOTOR_LEFT_INST);
     DL_TimerG_enablePower(PWM_MOTOR_RIGHT_INST);
-    DL_TimerA_enablePower(PWM_STEP_YAW_INST);
     DL_TimerG_enablePower(PWM_STEP_PITCH_INST);
+    DL_TimerA_enablePower(CAPTURE_ABS_PWM_INST);
     DL_TimerA_enablePower(TIMER_CTRL_1KHZ_INST);
     DL_I2C_enablePower(I2C_SENSOR_BUS_INST);
     DL_UART_Main_enablePower(UART_DEBUG_INST);
@@ -133,10 +133,10 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
     DL_GPIO_enableOutput(GPIO_PWM_MOTOR_RIGHT_C0_PORT, GPIO_PWM_MOTOR_RIGHT_C0_PIN);
     DL_GPIO_initPeripheralOutputFunction(GPIO_PWM_MOTOR_RIGHT_C1_IOMUX,GPIO_PWM_MOTOR_RIGHT_C1_IOMUX_FUNC);
     DL_GPIO_enableOutput(GPIO_PWM_MOTOR_RIGHT_C1_PORT, GPIO_PWM_MOTOR_RIGHT_C1_PIN);
-    DL_GPIO_initPeripheralOutputFunction(GPIO_PWM_STEP_YAW_C0_IOMUX,GPIO_PWM_STEP_YAW_C0_IOMUX_FUNC);
-    DL_GPIO_enableOutput(GPIO_PWM_STEP_YAW_C0_PORT, GPIO_PWM_STEP_YAW_C0_PIN);
     DL_GPIO_initPeripheralOutputFunction(GPIO_PWM_STEP_PITCH_C0_IOMUX,GPIO_PWM_STEP_PITCH_C0_IOMUX_FUNC);
     DL_GPIO_enableOutput(GPIO_PWM_STEP_PITCH_C0_PORT, GPIO_PWM_STEP_PITCH_C0_PIN);
+
+    DL_GPIO_initPeripheralInputFunction(GPIO_CAPTURE_ABS_PWM_C0_IOMUX,GPIO_CAPTURE_ABS_PWM_C0_IOMUX_FUNC);
 
     
 	DL_GPIO_initPeripheralInputFunctionFeatures(
@@ -164,8 +164,6 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
     DL_GPIO_initDigitalOutput(GPIO_MOTOR_DIR_LEFT_IOMUX);
 
     DL_GPIO_initDigitalOutput(GPIO_MOTOR_DIR_RIGHT_IOMUX);
-
-    DL_GPIO_initDigitalOutput(GPIO_TURRET_DIR_YAW_IOMUX);
 
     DL_GPIO_initDigitalOutput(GPIO_TURRET_DIR_PITCH_IOMUX);
 
@@ -221,22 +219,30 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
 		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_NONE,
 		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
 
+    DL_GPIO_initDigitalInputFeatures(GPIO_BUTTONS_MODE_IOMUX,
+		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
+		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
+
+    DL_GPIO_initDigitalInputFeatures(GPIO_BUTTONS_START_IOMUX,
+		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
+		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
+
     DL_GPIO_clearPins(GPIOB, GPIO_LED_LED_STATUS_PIN |
 		GPIO_MOTOR_DIR_LEFT_PIN |
 		GPIO_MOTOR_DIR_RIGHT_PIN |
-		GPIO_TURRET_DIR_YAW_PIN |
 		GPIO_TURRET_DIR_PITCH_PIN |
 		GPIO_TURRET_LASER_EN_PIN |
 		GPIO_TURRET_BUZZER_PIN);
     DL_GPIO_enableOutput(GPIOB, GPIO_LED_LED_STATUS_PIN |
 		GPIO_MOTOR_DIR_LEFT_PIN |
 		GPIO_MOTOR_DIR_RIGHT_PIN |
-		GPIO_TURRET_DIR_YAW_PIN |
 		GPIO_TURRET_DIR_PITCH_PIN |
 		GPIO_TURRET_LASER_EN_PIN |
 		GPIO_TURRET_BUZZER_PIN);
     DL_GPIO_setLowerPinsPolarity(GPIOB, DL_GPIO_PIN_1_EDGE_RISE_FALL |
-		DL_GPIO_PIN_4_EDGE_RISE_FALL);
+		DL_GPIO_PIN_4_EDGE_RISE_FALL |
+		DL_GPIO_PIN_12_EDGE_FALL |
+		DL_GPIO_PIN_7_EDGE_FALL);
     DL_GPIO_setUpperPinsPolarity(GPIOB, DL_GPIO_PIN_20_EDGE_RISE_FALL |
 		DL_GPIO_PIN_24_EDGE_RISE_FALL);
     DL_GPIO_clearInterruptStatus(GPIOB, GPIO_ENCODER_ENC_L_B_PIN |
@@ -374,50 +380,6 @@ SYSCONFIG_WEAK void SYSCFG_DL_PWM_MOTOR_RIGHT_init(void) {
  * timerClkFreq = (timerClkSrc / (timerClkDivRatio * (timerClkPrescale + 1)))
  *   32000000 Hz = 32000000 Hz / (1 * (0 + 1))
  */
-static const DL_TimerA_ClockConfig gPWM_STEP_YAWClockConfig = {
-    .clockSel = DL_TIMER_CLOCK_BUSCLK,
-    .divideRatio = DL_TIMER_CLOCK_DIVIDE_1,
-    .prescale = 0U
-};
-
-static const DL_TimerA_PWMConfig gPWM_STEP_YAWConfig = {
-    .pwmMode = DL_TIMER_PWM_MODE_EDGE_ALIGN,
-    .period = 32000,
-    .isTimerWithFourCC = true,
-    .startTimer = DL_TIMER_STOP,
-};
-
-SYSCONFIG_WEAK void SYSCFG_DL_PWM_STEP_YAW_init(void) {
-
-    DL_TimerA_setClockConfig(
-        PWM_STEP_YAW_INST, (DL_TimerA_ClockConfig *) &gPWM_STEP_YAWClockConfig);
-
-    DL_TimerA_initPWMMode(
-        PWM_STEP_YAW_INST, (DL_TimerA_PWMConfig *) &gPWM_STEP_YAWConfig);
-
-    // Set Counter control to the smallest CC index being used
-    DL_TimerA_setCounterControl(PWM_STEP_YAW_INST,DL_TIMER_CZC_CCCTL0_ZCOND,DL_TIMER_CAC_CCCTL0_ACOND,DL_TIMER_CLC_CCCTL0_LCOND);
-
-    DL_TimerA_setCaptureCompareOutCtl(PWM_STEP_YAW_INST, DL_TIMER_CC_OCTL_INIT_VAL_LOW,
-		DL_TIMER_CC_OCTL_INV_OUT_DISABLED, DL_TIMER_CC_OCTL_SRC_FUNCVAL,
-		DL_TIMERA_CAPTURE_COMPARE_0_INDEX);
-
-    DL_TimerA_setCaptCompUpdateMethod(PWM_STEP_YAW_INST, DL_TIMER_CC_UPDATE_METHOD_IMMEDIATE, DL_TIMERA_CAPTURE_COMPARE_0_INDEX);
-    DL_TimerA_setCaptureCompareValue(PWM_STEP_YAW_INST, 16000, DL_TIMER_CC_0_INDEX);
-
-    DL_TimerA_enableClock(PWM_STEP_YAW_INST);
-
-
-    
-    DL_TimerA_setCCPDirection(PWM_STEP_YAW_INST , DL_TIMER_CC0_OUTPUT );
-
-
-}
-/*
- * Timer clock configuration to be sourced by  / 1 (32000000 Hz)
- * timerClkFreq = (timerClkSrc / (timerClkDivRatio * (timerClkPrescale + 1)))
- *   32000000 Hz = 32000000 Hz / (1 * (0 + 1))
- */
 static const DL_TimerG_ClockConfig gPWM_STEP_PITCHClockConfig = {
     .clockSel = DL_TIMER_CLOCK_BUSCLK,
     .divideRatio = DL_TIMER_CLOCK_DIVIDE_1,
@@ -458,6 +420,44 @@ SYSCONFIG_WEAK void SYSCFG_DL_PWM_STEP_PITCH_init(void) {
 
 }
 
+
+
+/*
+ * Timer clock configuration to be sourced by BUSCLK /  (32000000 Hz)
+ * timerClkFreq = (timerClkSrc / (timerClkDivRatio * (timerClkPrescale + 1)))
+ *   1000000 Hz = 32000000 Hz / (1 * (31 + 1))
+ */
+static const DL_TimerA_ClockConfig gCAPTURE_ABS_PWMClockConfig = {
+    .clockSel    = DL_TIMER_CLOCK_BUSCLK,
+    .divideRatio = DL_TIMER_CLOCK_DIVIDE_1,
+    .prescale = 31U
+};
+
+/*
+ * Timer load value (where the counter starts from) is calculated as (timerPeriod * timerClockFreq) - 1
+ * CAPTURE_ABS_PWM_INST_LOAD_VALUE = (20 ms * 1000000 Hz) - 1
+ */
+static const DL_TimerA_CaptureCombinedConfig gCAPTURE_ABS_PWMCaptureConfig = {
+    .captureMode    = DL_TIMER_CAPTURE_COMBINED_MODE_PULSE_WIDTH_AND_PERIOD,
+    .period         = CAPTURE_ABS_PWM_INST_LOAD_VALUE,
+    .startTimer     = DL_TIMER_STOP,
+    .inputChan      = DL_TIMER_INPUT_CHAN_0,
+    .inputInvMode   = DL_TIMER_CC_INPUT_INV_NOINVERT,
+};
+
+SYSCONFIG_WEAK void SYSCFG_DL_CAPTURE_ABS_PWM_init(void) {
+
+    DL_TimerA_setClockConfig(CAPTURE_ABS_PWM_INST,
+        (DL_TimerA_ClockConfig *) &gCAPTURE_ABS_PWMClockConfig);
+
+    DL_TimerA_initCaptureCombinedMode(CAPTURE_ABS_PWM_INST,
+        (DL_TimerA_CaptureCombinedConfig *) &gCAPTURE_ABS_PWMCaptureConfig);
+    DL_TimerA_enableInterrupt(CAPTURE_ABS_PWM_INST , DL_TIMERA_INTERRUPT_CC1_DN_EVENT |
+		DL_TIMERA_INTERRUPT_ZERO_EVENT);
+
+    DL_TimerA_enableClock(CAPTURE_ABS_PWM_INST);
+
+}
 
 
 /*

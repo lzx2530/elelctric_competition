@@ -1,5 +1,6 @@
 #include "app/app_isr.h"
 #include "app/app_control_scheduler.h"
+#include "bsp/bsp_operator_input.h"
 #include "bsp/bsp_uart.h"
 #include "ti_msp_dl_config.h"
 
@@ -35,6 +36,7 @@ void GROUP1_IRQHandler(void)
                 if (iidx == DL_GPIO_IIDX_NO_INTR) {
                     break;
                 }
+                bsp_operator_input_handle_gpio_interrupt((uint32_t) iidx);
                 if (driver != NULL) {
                     encoder_driver_handle_gpio_interrupt(driver, GPIOB, (uint32_t) iidx);
                 }
@@ -54,6 +56,13 @@ void UART0_IRQHandler(void)
 {
     bsp_uart_debug_irq_handler();
 }
+
+#if defined(CAPTURE_ABS_PWM_INST)
+void TIMA0_IRQHandler(void)
+{
+    bsp_operator_input_capture_irq_handler();
+}
+#endif
 
 void TIMA1_IRQHandler(void)
 {

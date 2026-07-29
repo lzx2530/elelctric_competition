@@ -65,29 +65,14 @@ static status_t oled_send_command(oled_handle_t *handle, uint8_t command)
 
 static status_t oled_send_data(oled_handle_t *handle, const uint8_t *data, uint16_t length)
 {
-    uint8_t safe_packet[2] = {0x40, 0x00};
+    uint8_t packet[2] = {0x40U, 0x00U};
 
-    for (uint16_t safe_offset = 0U; safe_offset < length; safe_offset++) {
-        safe_packet[1] = data[safe_offset];
-        if (bsp_i2c_write_bytes(handle->i2c_addr, safe_packet, 2U) != STATUS_OK) {
-            return STATUS_ERROR;
-        }
-    }
-
-    return STATUS_OK;
-
-    uint8_t packet[17];
-    uint16_t offset = 0U;
-
-    while (offset < length) {
-        uint16_t chunk = ((length - offset) > 16U) ? 16U : (length - offset);
-        packet[0] = 0x40;
-        memcpy(&packet[1], &data[offset], chunk);
+    for (uint16_t offset = 0U; offset < length; offset++) {
+        packet[1] = data[offset];
         /* 分块发送，避免一次性临时缓冲过大。 */
-        if (bsp_i2c_write_bytes(handle->i2c_addr, packet, (uint16_t) (chunk + 1U)) != STATUS_OK) {
+        if (bsp_i2c_write_bytes(handle->i2c_addr, packet, sizeof(packet)) != STATUS_OK) {
             return STATUS_ERROR;
         }
-        offset += chunk;
     }
 
     return STATUS_OK;
@@ -185,12 +170,25 @@ void oled_printf(oled_handle_t *handle, uint8_t x, uint8_t y, const char *fmt, .
 
 status_t oled_flush(oled_handle_t *handle)
 {
-    if (!handle->dirty) {
-        return STATUS_OK;
+    return oled_flush_pages(handle, 0U, SSD1306_HEIGHT / 8U);
+}
+
+status_t oled_flush_pages(oled_handle_t *handle, uint8_t first_page, uint8_t page_count)
+{
+    uint8_t end_page;
+
+    if ((handle == NULL) || (first_page >= (SSD1306_HEIGHT / 8U)) ||
+        (page_count == 0U)) {
+        return STATUS_INVALID_ARG;
     }
 
-    /* SSD1306 按页刷新，每页 128 字节，逻辑比逐点写屏更简单稳定。 */
-    for (uint8_t page = 0U; page < 8U; page++) {
+    end_page = first_page + page_count;
+    if (end_page > (SSD1306_HEIGHT / 8U)) {
+        return STATUS_INVALID_ARG;
+    }
+
+    /* The timer display changes in only two pages. */
+    for (uint8_t page = first_page; page < end_page; page++) {
         if (oled_send_command(handle, (uint8_t) (0xB0U + page)) != STATUS_OK) {
             return STATUS_ERROR;
         }
@@ -205,7 +203,9 @@ status_t oled_flush(oled_handle_t *handle)
         }
     }
 
-    handle->dirty = false;
+    if ((first_page == 0U) && (page_count == (SSD1306_HEIGHT / 8U))) {
+        handle->dirty = false;
+    }
     return STATUS_OK;
 }
 

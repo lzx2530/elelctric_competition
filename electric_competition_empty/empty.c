@@ -31,16 +31,18 @@
  */
 
 #include "app/app_chassis.h"
+#include "app/app_ball_control.h"
 #include "app/app_control_scheduler.h"
 #include "app/app_imu.h"
 #include "app/app_isr.h"
-#include "app/app_turret.h"
+#include "app/app_mission.h"
 #include "app/app_ui.h"
 #include "algo/algo_filter.h"
 #include "algo/algo_fusion.h"
 #include "algo/algo_pid.h"
 #include "bsp/bsp_gpio.h"
 #include "bsp/bsp_i2c.h"
+#include "bsp/bsp_operator_input.h"
 #include "bsp/bsp_pwm.h"
 #include "bsp/bsp_uart.h"
 #include "common/math_util.h"
@@ -60,7 +62,13 @@
 typedef enum {
     APP_RUN_MODE_BRINGUP_TEST = 0,
     APP_RUN_MODE_VEHICLE = 1,
+    APP_RUN_MODE_ACTUATOR_SINE_TEST = 2,
+    APP_RUN_MODE_PA8_INPUT_TEST = 3,
+    APP_RUN_MODE_LINE_TRACKING_TEST = 4,
 } app_run_mode_t;
+
+#define APP_ENABLE_OLED_UI       (0U)
+#define APP_ENABLE_VOFA_STREAM   (0U)
 
 typedef struct {
     oled_handle_t oled;
@@ -108,8 +116,10 @@ typedef enum {
 
 static bringup_test_context_t g_bringup_test;
 
-static void run_vehicle_app(void);
+static void run_vehicle_app(bool line_tracking_test);
 static void run_bringup_test(void);
+static void run_actuator_sine_test(void);
+static void run_pa8_input_test(void);
 static void bringup_test_init(bringup_test_context_t *ctx);
 static void bringup_test_process(bringup_test_context_t *ctx, const scheduler_flags_t *flags);
 static void bringup_test_poll_debug_command(bringup_test_context_t *ctx);
@@ -125,24 +135,35 @@ static const char *bringup_test_get_stepper_axis_name(const stepper_handle_t *ha
 
 int main(void)
 {
-    static const app_run_mode_t app_mode = APP_RUN_MODE_VEHICLE;
+    static const app_run_mode_t app_mode = APP_RUN_MODE_LINE_TRACKING_TEST;
 
     if (app_mode == APP_RUN_MODE_BRINGUP_TEST) {
         run_bringup_test();
+    } else if (app_mode == APP_RUN_MODE_ACTUATOR_SINE_TEST) {
+        run_actuator_sine_test();
+    } else if (app_mode == APP_RUN_MODE_PA8_INPUT_TEST) {
+        run_pa8_input_test();
+    } else if (app_mode == APP_RUN_MODE_LINE_TRACKING_TEST) {
+        run_vehicle_app(true);
     } else {
-        run_vehicle_app();
+        run_vehicle_app(false);
     }
 
     while (1) {
     }
 }
 
-static void run_vehicle_app(void)
+static void run_vehicle_app(bool line_tracking_test)
 {
     scheduler_flags_t scheduler_flags;
     uint32_t last_chassis_control_tick_ms = 0U;
+    uint32_t last_k230_log_tick_ms = 0U;
+    uint32_t k230_position_frame_count = 0U;
+    uint32_t last_abs_pwm_high_ticks = 0U;
+    uint32_t last_abs_pwm_period_ticks = 0U;
     k230_parser_t k230_parser;
     ringbuf_t *k230_ringbuf;
+#if APP_ENABLE_VOFA_STREAM
     static const proto_vofa_firewater_mode_t vofa_mode = PROTO_VOFA_FIREWATER_MODE_NAMED;
     static const char *const vofa_names[10] = {
         "line_error",
@@ -156,10 +177,12 @@ static void run_vehicle_app(void)
         "left_output",
         "right_output",
     };
+#endif
 
     SYSCFG_DL_init();
 
     bsp_gpio_init();
+    bsp_operator_input_init();
     bsp_pwm_init();
     bsp_i2c_init();
     bsp_uart_init();
@@ -172,28 +195,84 @@ static void run_vehicle_app(void)
     app_chassis_init();
     app_isr_set_encoder_driver(app_chassis_get_encoder_driver());
     app_imu_init();
-    app_turret_init();
+    app_ball_control_init();
+    app_mission_init();
+    if (line_tracking_test) {
+        app_mission_start_from_k230(APP_MISSION_LINE_LOOP, 0U);
+    }
+#if APP_ENABLE_OLED_UI
     app_ui_init();
+#endif
     app_control_scheduler_init();
 
     NVIC_EnableIRQ(GPIO_ENCODER_INT_IRQN);
 
-    bsp_uart_debug_printf("system init done\r\n");
+    bsp_uart_debug_printf("system init done; K230 UART2 RX=PB18 115200/8N1\r\n");
 
     while (1) {
         k230_frame_t frame;
-        if (proto_k230_process_ringbuf(&k230_parser, k230_ringbuf, &frame)) {
-            app_turret_set_target(&frame);
+        uint8_t operator_events;
+        uint32_t high_ticks;
+        uint32_t period_ticks;
+        static bool mode_press_seen;
+        static bool start_press_seen;
+        static uint32_t last_mode_press_ms;
+        static uint32_t last_start_press_ms;
+
+        app_control_scheduler_fetch(&scheduler_flags);
+
+        operator_events = bsp_operator_input_take_events();
+        if ((operator_events & BSP_OPERATOR_EVENT_MODE) != 0U &&
+            (!mode_press_seen ||
+                ((scheduler_flags.tick_ms - last_mode_press_ms) >= 200U))) {
+            app_mission_next_mode();
+            mode_press_seen = true;
+            last_mode_press_ms = scheduler_flags.tick_ms;
+        }
+        if ((operator_events & BSP_OPERATOR_EVENT_START) != 0U &&
+            (!start_press_seen ||
+                ((scheduler_flags.tick_ms - last_start_press_ms) >= 200U))) {
+            app_mission_start(scheduler_flags.tick_ms);
+            start_press_seen = true;
+            last_start_press_ms = scheduler_flags.tick_ms;
+        }
+        if (bsp_operator_input_take_abs_pwm(&high_ticks, &period_ticks)) {
+            last_abs_pwm_high_ticks = high_ticks;
+            last_abs_pwm_period_ticks = period_ticks;
+            app_ball_control_set_actuator_pwm(high_ticks, period_ticks);
         }
 
-        /* The scheduler snapshots and clears flags so each task consumes one tick at most once. */
-        app_control_scheduler_fetch(&scheduler_flags);
+        while ((!line_tracking_test) &&
+            proto_k230_process_ringbuf(&k230_parser, k230_ringbuf, &frame)) {
+            if (frame.type == K230_PROTOCOL_TYPE_TASK_START) {
+                app_mission_start_from_k230(frame.task_flag, scheduler_flags.tick_ms);
+                bsp_uart_debug_printf("[K230] TASK_START flag=%u\r\n", (unsigned) frame.task_flag);
+            } else if (frame.type == K230_PROTOCOL_TYPE_BALL_REPORT) {
+                app_ball_control_set_vision(&frame, scheduler_flags.tick_ms);
+                k230_position_frame_count++;
+                if ((k230_position_frame_count == 1U) ||
+                    ((scheduler_flags.tick_ms - last_k230_log_tick_ms) >= 100U)) {
+                    bsp_uart_debug_printf(
+                        "[K230] BALL seq=%u flags=0x%02X err=%dmm conf=%u valid=%u stable=%u ref=%u stop=%u\r\n",
+                        (unsigned) frame.ball.sequence,
+                        (unsigned) frame.ball.status,
+                        (int) frame.ball.position_mm,
+                        (unsigned) frame.ball.confidence_permille,
+                        frame.ball.valid ? 1U : 0U,
+                        frame.ball.stable ? 1U : 0U,
+                        frame.ball.reference_ready ? 1U : 0U,
+                        frame.ball.stop_requested ? 1U : 0U);
+                    last_k230_log_tick_ms = scheduler_flags.tick_ms;
+                }
+            }
+        }
 
         if (scheduler_flags.line_5ms) {
             app_chassis_line_task();
         }
         if (scheduler_flags.imu_10ms) {
             app_imu_task();
+            app_mission_task(app_imu_get_snapshot(), scheduler_flags.tick_ms);
         }
         if (scheduler_flags.control_1khz) {
             uint32_t elapsed_ms = scheduler_flags.tick_ms - last_chassis_control_tick_ms;
@@ -202,12 +281,42 @@ static void run_vehicle_app(void)
             last_chassis_control_tick_ms = scheduler_flags.tick_ms;
             chassis_elapsed_s = 0.001f * (float) elapsed_ms;
             app_chassis_control_task(0.001f, chassis_elapsed_s);
-            app_turret_control_task(0.001f);
+            app_ball_control_inner_task(0.001f);
         }
-        if (scheduler_flags.oled_50ms) {
-            app_ui_refresh(app_chassis_get_snapshot(), app_turret_get_snapshot(), app_imu_get_snapshot());
+        if ((APP_ENABLE_OLED_UI != 0U) && scheduler_flags.oled_50ms) {
+            app_ui_refresh(app_chassis_get_snapshot(), app_ball_control_get_snapshot(),
+                app_mission_get_snapshot());
         }
         if (scheduler_flags.debug_100ms) {
+            uint32_t capture_count;
+            uint32_t timeout_count;
+            uint32_t invalid_count;
+            uint32_t duty_permille = 0U;
+            const mission_snapshot_t *mission = app_mission_get_snapshot();
+            const ball_control_snapshot_t *ball = app_ball_control_get_snapshot();
+
+            bsp_operator_input_get_abs_pwm_diagnostics(&capture_count, &timeout_count, &invalid_count);
+            if (last_abs_pwm_period_ticks != 0U) {
+                duty_permille = (last_abs_pwm_high_ticks * 1000U) / last_abs_pwm_period_ticks;
+            }
+            bsp_uart_debug_printf(
+                "[CTRL] task=%u state=%u en=%u enc=%u fb=%ld/1000 tgt=%ld/1000 cmd=%ldHz fault=%u\r\n",
+                (unsigned) mission->mode,
+                (unsigned) mission->state,
+                ball->enabled ? 1U : 0U,
+                ball->actuator_feedback_valid ? 1U : 0U,
+                (long) (ball->actuator_feedback * 1000.0F),
+                (long) (ball->actuator_target * 1000.0F),
+                (long) ball->stepper_command_hz,
+                (unsigned) ball->fault);
+            bsp_uart_debug_printf("[CAP] count=%lu timeout=%lu invalid=%lu high=%lu period=%lu duty=%lu/1000\r\n",
+                (unsigned long) capture_count,
+                (unsigned long) timeout_count,
+                (unsigned long) invalid_count,
+                (unsigned long) last_abs_pwm_high_ticks,
+                (unsigned long) last_abs_pwm_period_ticks,
+                (unsigned long) duty_permille);
+#if APP_ENABLE_VOFA_STREAM
             const chassis_snapshot_t *chassis = app_chassis_get_snapshot();
             proto_vofa_firewater_packet_t vofa_packet;
             /* Keep one fixed set of debug variables and switch only the text formatting mode. */
@@ -228,7 +337,118 @@ static void run_vehicle_app(void)
             vofa_packet.data = vofa_channels;
             vofa_packet.count = 10U;
             proto_vofa_firewater_send_packet(&vofa_packet);
+#endif
             bsp_gpio_toggle_led();
+        }
+    }
+}
+
+static void run_pa8_input_test(void)
+{
+    scheduler_flags_t scheduler_flags;
+
+    SYSCFG_DL_init();
+    bsp_gpio_init();
+    bsp_uart_init();
+    bsp_uart_enable_irqs();
+    app_control_scheduler_init();
+
+    /* Temporarily override TIMA0 capture mux to prove the PA8/J1.4 signal level. */
+    DL_GPIO_initDigitalInputFeatures(GPIO_CAPTURE_ABS_PWM_C0_IOMUX,
+        DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
+        DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
+    bsp_uart_debug_printf("PA8 input test: disconnect encoder PWM, expected level=1\r\n");
+
+    while (1) {
+        app_control_scheduler_fetch(&scheduler_flags);
+        if (scheduler_flags.debug_100ms) {
+            uint32_t level = DL_GPIO_readPins(GPIO_CAPTURE_ABS_PWM_C0_PORT,
+                GPIO_CAPTURE_ABS_PWM_C0_PIN) != 0U ? 1U : 0U;
+            bsp_uart_debug_printf("PA8 level=%lu\r\n", (unsigned long) level);
+        }
+    }
+}
+
+static void run_actuator_sine_test(void)
+{
+    scheduler_flags_t scheduler_flags;
+    stepper_handle_t stepper;
+    static const stepper_config_t stepper_cfg = {
+        .axis = BSP_STEPPER_AXIS_PITCH,
+        .dir_output = BSP_DIR_PITCH,
+        .invert_direction = false,
+        .min_frequency_hz = 5.0F,
+        .max_frequency_hz = 300.0F,
+        .accel_hz_per_s = 800.0F,
+    };
+    const float test_period_s = 8.0F;
+    const float max_frequency_hz = 250.0F;
+    const float two_pi = 6.283185307F;
+    uint32_t last_high_ticks = 0U;
+    uint32_t last_period_ticks = 0U;
+    uint16_t pa8_high_samples = 0U;
+    uint16_t pa8_total_samples = 0U;
+
+    SYSCFG_DL_init();
+    bsp_gpio_init();
+    bsp_operator_input_init();
+    bsp_pwm_init();
+    bsp_uart_init();
+    bsp_uart_enable_irqs();
+    bsp_pwm_start_all();
+    app_control_scheduler_init();
+
+    stepper_init(&stepper, &stepper_cfg);
+    stepper_enable(&stepper, true);
+    bsp_uart_debug_printf("actuator sine test: period=8s max=250Hz, K230/chassis disabled\r\n");
+
+    while (1) {
+        uint32_t high_ticks;
+        uint32_t period_ticks;
+
+        app_control_scheduler_fetch(&scheduler_flags);
+        if (scheduler_flags.control_1khz) {
+            float phase = two_pi * (float) scheduler_flags.tick_ms / (1000.0F * test_period_s);
+            float command_hz = max_frequency_hz * sinf(phase);
+
+            if (DL_GPIO_readPins(GPIO_CAPTURE_ABS_PWM_C0_PORT,
+                    GPIO_CAPTURE_ABS_PWM_C0_PIN) != 0U) {
+                pa8_high_samples++;
+            }
+            pa8_total_samples++;
+            stepper_set_speed(&stepper, command_hz);
+            stepper_update(&stepper, 0.001F);
+        }
+
+        if (bsp_operator_input_take_abs_pwm(&high_ticks, &period_ticks)) {
+            /* Captured PWM comes directly from the absolute encoder on PA8. */
+            last_high_ticks = high_ticks;
+            last_period_ticks = period_ticks;
+        }
+
+        if (scheduler_flags.debug_100ms) {
+            uint32_t capture_count;
+            uint32_t timeout_count;
+            uint32_t invalid_count;
+            float command_hz = max_frequency_hz * sinf(two_pi *
+                (float) scheduler_flags.tick_ms / (1000.0F * test_period_s));
+            bsp_operator_input_get_abs_pwm_diagnostics(&capture_count,
+                &timeout_count, &invalid_count);
+            if (last_period_ticks != 0U) {
+                float duty = 100.0F * (float) last_high_ticks / (float) last_period_ticks;
+                bsp_uart_debug_printf("sine t=%lums cmd=%.1fHz pwm=%lu/%lu duty=%.2f%% cap=%lu zero=%lu bad=%lu pa8=%u/%u\r\n",
+                    (unsigned long) scheduler_flags.tick_ms, command_hz,
+                    (unsigned long) last_high_ticks, (unsigned long) last_period_ticks, duty,
+                    (unsigned long) capture_count, (unsigned long) timeout_count,
+                    (unsigned long) invalid_count, pa8_high_samples, pa8_total_samples);
+            } else {
+                bsp_uart_debug_printf("sine t=%lums cmd=%.1fHz pwm=waiting cap=%lu zero=%lu bad=%lu pa8=%u/%u\r\n",
+                    (unsigned long) scheduler_flags.tick_ms, command_hz,
+                    (unsigned long) capture_count, (unsigned long) timeout_count,
+                    (unsigned long) invalid_count, pa8_high_samples, pa8_total_samples);
+            }
+            pa8_high_samples = 0U;
+            pa8_total_samples = 0U;
         }
     }
 }
@@ -240,6 +460,7 @@ static void run_bringup_test(void)
     SYSCFG_DL_init();
 
     bsp_gpio_init();
+    bsp_operator_input_init();
     bsp_pwm_init();
     bsp_i2c_init();
     bsp_uart_init();
@@ -320,8 +541,8 @@ static void bringup_test_init(bringup_test_context_t *ctx)
         .enable_setpoint_ramp = false,
     };
     static const stepper_config_t single_stepper_cfg = {
-        .axis = BSP_STEPPER_AXIS_YAW,
-        .dir_output = BSP_DIR_YAW,
+        .axis = BSP_STEPPER_AXIS_PITCH,
+        .dir_output = BSP_DIR_PITCH,
         .invert_direction = false,
         .min_frequency_hz = 5.0f,
         .max_frequency_hz = 2000.0f,
@@ -796,8 +1017,6 @@ static const char *bringup_test_get_stepper_stage_name(uint8_t stage)
 static const char *bringup_test_get_stepper_axis_name(const stepper_handle_t *handle)
 {
     switch (handle->cfg.axis) {
-        case BSP_STEPPER_AXIS_YAW:
-            return "YAW";
         case BSP_STEPPER_AXIS_PITCH:
             return "PITCH";
         default:
