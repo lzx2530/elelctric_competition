@@ -13,7 +13,14 @@ typedef struct {
     float right_speed_rps;
     float left_target_rps;
     float right_target_rps;
+    float left_pid_setpoint_rps;
+    float right_pid_setpoint_rps;
+    float control_dt_s;
+    float raw_line_error;
     float line_error;
+    float predicted_line_error;
+    float turn_rps;
+    float output_boost;
     float line_offset_m;
     float line_curvature_1pm;
     float travel_mm;
@@ -28,6 +35,7 @@ typedef struct {
 
 void app_chassis_init(void);
 void app_chassis_set_enabled(bool enabled);
+void app_chassis_brake(float duration_s);
 void app_chassis_set_cruise_speed_mps(float speed_mps);
 void app_chassis_reset_travel(void);
 void app_chassis_line_task(void);

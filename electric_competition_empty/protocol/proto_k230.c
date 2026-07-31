@@ -35,6 +35,14 @@ static bool proto_k230_parse_ball_report(k230_parser_t *parser, k230_frame_t *ou
     frame->ball.stop_requested = (payload[0] & K230_BALL_FLAG_STOP_REQUEST) != 0U;
     frame->ball.position_mm = proto_k230_read_i16_le(&payload[1]);
     frame->ball.confidence_permille = proto_k230_read_u16_le(&payload[3]);
+    frame->ball.actual_position_present = parser->raw[5] == 7U;
+    frame->ball.actual_position_valid = false;
+    frame->ball.actual_position_mm = 0;
+    if (frame->ball.actual_position_present && frame->ball.valid) {
+        frame->ball.actual_position_mm = proto_k230_read_i16_le(&payload[5]);
+        frame->ball.actual_position_valid =
+            frame->ball.actual_position_mm != INT16_MIN;
+    }
     frame->ball.ball_diameter_px = 0U;
     frame->ball.stable_frames = 0U;
     frame->ball.sequence = parser->raw[4];

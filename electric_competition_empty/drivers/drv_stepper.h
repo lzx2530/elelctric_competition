@@ -11,6 +11,7 @@ typedef struct {
     float min_frequency_hz;
     float max_frequency_hz;
     float accel_hz_per_s;
+    float reverse_accel_hz_per_s;
 } stepper_config_t;
 
 typedef struct {
@@ -18,6 +19,7 @@ typedef struct {
     float target_frequency_hz;
     float current_frequency_hz;
     bool enabled;
+    bool reversing;
 } stepper_handle_t;
 
 void stepper_init(stepper_handle_t *handle, const stepper_config_t *cfg);

@@ -10,6 +10,7 @@
 #define APP_MISSION_LINE_LIMIT_MS              (20000U)
 #define APP_MISSION_BALANCE_LIMIT_MS           (30000U)
 #define APP_MISSION_LINE_CRUISE_SPEED_MPS      (1.53F)
+#define APP_MISSION_STOP_BRAKE_DURATION_S      (0.12F)
 
 typedef struct {
     mission_snapshot_t snapshot;
@@ -29,6 +30,12 @@ static void mission_stop_outputs(void)
 {
     app_chassis_set_enabled(false);
     app_ball_control_set_enabled(false);
+}
+
+static void mission_finish_with_brake(void)
+{
+    app_ball_control_set_enabled(false);
+    app_chassis_brake(APP_MISSION_STOP_BRAKE_DURATION_S);
 }
 
 static void mission_enter_fault(uint8_t fault_code)
@@ -102,9 +109,15 @@ void app_mission_start_from_k230(uint8_t task_flag, uint32_t tick_ms)
     if ((task_flag < APP_MISSION_VIDEO_RECORD) || (task_flag > APP_MISSION_LOOP_HOLD)) {
         return;
     }
+    if ((g_mission.snapshot.mode == (app_mission_mode_t) task_flag) &&
+        ((g_mission.snapshot.state == APP_MISSION_ARMING) ||
+            (g_mission.snapshot.state == APP_MISSION_RUNNING))) {
+        return;
+    }
 
     mission_stop_outputs();
     app_ball_control_reset_vision();
+    app_ball_control_set_trajectory_enabled(task_flag == APP_MISSION_STATIC_SWEEP);
     g_mission.snapshot.mode = (app_mission_mode_t) task_flag;
     g_mission.snapshot.state = APP_MISSION_ARMING;
     g_mission.snapshot.elapsed_ms = 0U;
@@ -150,31 +163,30 @@ void app_mission_task(const imu_snapshot_t *imu, uint32_t tick_ms)
     }
 
     if (g_mission.snapshot.mode == APP_MISSION_STATIC_SWEEP) {
-        if (ball->stop_requested) {
-            mission_stop_outputs();
-            g_mission.snapshot.state = APP_MISSION_FINISHED;
-        } else if (g_mission.snapshot.elapsed_ms > APP_MISSION_STATIC_LIMIT_MS) {
+        /* K230 STOP ends the sweep phase, not the final position hold. */
+        if (!ball->stop_requested &&
+            g_mission.snapshot.elapsed_ms > APP_MISSION_STATIC_LIMIT_MS) {
             mission_enter_fault(1U);
         }
         return;
     }
 
     if (g_mission.snapshot.mode == APP_MISSION_LINE_LOOP && chassis->start_line_detected) {
-        mission_stop_outputs();
+        mission_finish_with_brake();
         g_mission.snapshot.state = APP_MISSION_FINISHED;
         return;
     }
 
     if (g_mission.snapshot.mode == APP_MISSION_AB_CENTER &&
         chassis->travel_mm >= APP_MISSION_AB_DISTANCE_MM) {
-        mission_stop_outputs();
+        mission_finish_with_brake();
         g_mission.snapshot.state = APP_MISSION_FINISHED;
         return;
     }
 
     if (g_mission.snapshot.mode != APP_MISSION_AB_CENTER &&
         chassis->travel_mm >= APP_MISSION_LOOP_GATE_MM && chassis->start_line_detected) {
-        mission_stop_outputs();
+        mission_finish_with_brake();
         g_mission.snapshot.state = APP_MISSION_FINISHED;
         return;
     }

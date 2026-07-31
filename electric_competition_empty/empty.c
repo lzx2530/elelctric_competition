@@ -71,9 +71,9 @@ typedef enum {
     APP_RUN_MODE_ACTUATOR_RESPONSE_TEST = 6,
 } app_run_mode_t;
 
-#define APP_ENABLE_OLED_UI       (1U)
-#define APP_ENABLE_VOFA_STREAM   (1U)
-#define APP_ENABLE_TEXT_DEBUG    (1U)
+#define APP_ENABLE_OLED_UI       (0U)
+#define APP_ENABLE_VOFA_STREAM   (0U)
+#define APP_ENABLE_TEXT_DEBUG    (0U)
 
 typedef struct {
     oled_handle_t oled;
@@ -170,7 +170,9 @@ static void run_vehicle_app(bool line_tracking_test)
     uint32_t last_chassis_control_tick_ms = 0U;
     uint32_t last_k230_log_tick_ms = 0U;
     uint32_t k230_position_frame_count = 0U;
+#if APP_ENABLE_TEXT_DEBUG
     uint32_t k230_task_start_frame_count = 0U;
+#endif
 #if APP_ENABLE_TEXT_DEBUG
     uint32_t last_abs_pwm_high_ticks = 0U;
     uint32_t last_abs_pwm_period_ticks = 0U;
@@ -180,16 +182,16 @@ static void run_vehicle_app(bool line_tracking_test)
 #if APP_ENABLE_VOFA_STREAM
     static const proto_vofa_firewater_mode_t vofa_mode = PROTO_VOFA_FIREWATER_MODE_RAW;
     static const char *const vofa_names[10] = {
-        "task_mode",
-        "mission_state",
-        "elapsed_s",
-        "ball_error_mm",
-        "ball_velocity_mmps",
-        "actuator_feedback",
-        "actuator_target",
-        "stepper_command_hz",
-        "stepper_pwm_hz",
-        "ball_fault",
+        "control_dt_ms",
+        "left_pid_setpoint_rps",
+        "right_pid_setpoint_rps",
+        "output_boost",
+        "left_speed_rps",
+        "right_speed_rps",
+        "left_target_rps",
+        "right_target_rps",
+        "left_output",
+        "right_output",
     };
 #endif
 
@@ -272,9 +274,13 @@ static void run_vehicle_app(bool line_tracking_test)
         while ((!line_tracking_test) &&
             proto_k230_process_ringbuf(&k230_parser, k230_ringbuf, &frame)) {
             if (frame.type == K230_PROTOCOL_TYPE_TASK_START) {
+#if APP_ENABLE_TEXT_DEBUG
                 k230_task_start_frame_count++;
+#endif
                 app_mission_start_from_k230(frame.task_flag, scheduler_flags.tick_ms);
+#if APP_ENABLE_TEXT_DEBUG
                 bsp_uart_debug_printf("[K230] TASK_START flag=%u\r\n", (unsigned) frame.task_flag);
+#endif
             } else if (frame.type == K230_PROTOCOL_TYPE_BALL_REPORT) {
                 app_ball_control_set_vision(&frame, scheduler_flags.tick_ms);
                 k230_position_frame_count++;
@@ -308,7 +314,7 @@ static void run_vehicle_app(bool line_tracking_test)
 
             last_chassis_control_tick_ms = scheduler_flags.tick_ms;
             chassis_elapsed_s = 0.001f * (float) elapsed_ms;
-            app_chassis_control_task(0.001f, chassis_elapsed_s);
+            app_chassis_control_task(chassis_elapsed_s, chassis_elapsed_s);
             app_ball_control_inner_task(chassis_elapsed_s);
         }
         if ((APP_ENABLE_OLED_UI != 0U) && scheduler_flags.oled_50ms) {
@@ -316,9 +322,12 @@ static void run_vehicle_app(bool line_tracking_test)
                 app_mission_get_snapshot());
         }
         if (scheduler_flags.debug_100ms) {
-#if (APP_ENABLE_TEXT_DEBUG != 0U) || (APP_ENABLE_VOFA_STREAM != 0U)
+#if APP_ENABLE_TEXT_DEBUG
             const mission_snapshot_t *mission = app_mission_get_snapshot();
             const ball_control_snapshot_t *ball = app_ball_control_get_snapshot();
+#endif
+#if APP_ENABLE_VOFA_STREAM
+            const chassis_snapshot_t *chassis = app_chassis_get_snapshot();
 #endif
 #if APP_ENABLE_TEXT_DEBUG
             uint32_t capture_count;
@@ -361,18 +370,17 @@ static void run_vehicle_app(bool line_tracking_test)
 #endif
 #if APP_ENABLE_VOFA_STREAM
             proto_vofa_firewater_packet_t vofa_packet;
-            /* Keep one fixed set of debug variables and switch only the text formatting mode. */
             float vofa_channels[10] = {
-                (float) mission->mode,
-                (float) mission->state,
-                0.001F * (float) mission->elapsed_ms,
-                ball->estimated_error_mm,
-                ball->ball_velocity_mmps,
-                ball->actuator_feedback,
-                ball->actuator_target,
-                ball->stepper_command_hz,
-                bsp_pwm_get_step_frequency(BSP_STEPPER_AXIS_PITCH),
-                (float) ball->fault,
+                1000.0F * chassis->control_dt_s,
+                chassis->left_pid_setpoint_rps,
+                chassis->right_pid_setpoint_rps,
+                chassis->output_boost,
+                chassis->left_speed_rps,
+                chassis->right_speed_rps,
+                chassis->left_target_rps,
+                chassis->right_target_rps,
+                chassis->left_output,
+                chassis->right_output,
             };
             vofa_packet.mode = vofa_mode;
             vofa_packet.names = vofa_names;

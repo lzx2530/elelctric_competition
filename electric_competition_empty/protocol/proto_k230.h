@@ -29,6 +29,9 @@ typedef struct {
     bool reference_ready;
     bool stop_requested;
     int16_t position_mm;
+    int16_t actual_position_mm;
+    bool actual_position_present;
+    bool actual_position_valid;
     uint16_t confidence_permille;
     uint16_t ball_diameter_px;
     uint8_t stable_frames;

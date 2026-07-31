@@ -18,13 +18,19 @@ typedef struct {
     bool stop_requested;
     bool actuator_feedback_valid;
     bool observer_ready;
+    bool trajectory_enabled;
+    bool actual_position_valid;
+    bool level_hold_active;
     int16_t target_mm;
     int16_t ball_position_mm;
+    int16_t actual_position_mm;
     float ball_velocity_mmps;
     float estimated_error_mm;
+    float trajectory_velocity_mmps;
     float tilt_command_rad;
     float tilt_feedback_rad;
     float tilt_feedforward_rad;
+    float actuator_tilt_rad;
     float actuator_phase;
     float actuator_target;
     float actuator_feedback;
@@ -35,6 +41,7 @@ typedef struct {
 void app_ball_control_init(void);
 void app_ball_control_set_enabled(bool enabled);
 void app_ball_control_set_target_mm(int16_t target_mm);
+void app_ball_control_set_trajectory_enabled(bool enabled);
 void app_ball_control_set_vision(const k230_frame_t *frame, uint32_t tick_ms);
 void app_ball_control_reset_vision(void);
 void app_ball_control_set_actuator_pwm(uint32_t high_ticks, uint32_t period_ticks);

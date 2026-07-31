@@ -7,14 +7,11 @@
 #include "drivers/drv_motor_dc.h"
 
 #define APP_CHASSIS_WHEEL_DIAMETER_M      (0.065F)
-#define APP_CHASSIS_MAX_SPEED_MPS         (1.60F)
+#define APP_CHASSIS_MAX_SPEED_MPS         (1.6F)
 #define APP_CHASSIS_MAX_TARGET_RPS        (10.0F)
-#define APP_CHASSIS_LINE_MARK_HITS        (6U)
-#define APP_CHASSIS_CENTER_MARK_MASK      (0x3CU)
-#define APP_CHASSIS_CENTER_MARK_HITS      (4U)
 #define APP_CHASSIS_LINE_LOST_CONFIRM_SAMPLES (3U)
-#define APP_CHASSIS_STRAIGHT_OUTPUT_BOOST (0.40F)
-#define APP_CHASSIS_TURN_OUTPUT_BOOST     (0.60F)
+#define APP_CHASSIS_STRAIGHT_OUTPUT_BOOST (0.50F)
+#define APP_CHASSIS_TURN_OUTPUT_BOOST     (0.70F)
 #define APP_CHASSIS_OUTPUT_BOOST_SLEW_RATE (2.0F)
 #define APP_CHASSIS_TURN_ENTER_RPS        (1.5F)
 #define APP_CHASSIS_TURN_EXIT_RPS         (0.5F)
@@ -25,6 +22,7 @@
 #define APP_CHASSIS_CURVE_SPEED_FILTER_ALPHA    (0.20F)
 #define APP_CHASSIS_CURVE_SPEED_SLOWDOWN_ALPHA  (0.35F)
 #define APP_CHASSIS_LINE_SAMPLE_PERIOD_S        (0.005F)
+#define APP_CHASSIS_MAX_BRAKE_DURATION_S        (0.20F)
 #define APP_CHASSIS_LINE_ERROR_FILTER_ALPHA     (0.30F)
 #define APP_CHASSIS_LINE_RATE_FILTER_ALPHA      (0.15F)
 #define APP_CHASSIS_LINE_PREDICTION_HORIZON_S   (0.028F)
@@ -57,6 +55,7 @@ typedef struct {
     float curve_speed_ramp_scale;
     float curve_speed_scale;
     float output_boost;
+    float brake_remaining_s;
     uint8_t line_lost_samples;
     uint8_t center_mark_count;
     bool enabled;
@@ -149,6 +148,17 @@ static uint8_t chassis_count_bits(uint8_t bits)
     return count;
 }
 
+static bool chassis_has_consecutive_line_mark(uint8_t bits)
+{
+    uint8_t overlapping_bits = bits;
+
+    overlapping_bits &= (uint8_t) (bits >> 1U);
+    overlapping_bits &= (uint8_t) (bits >> 2U);
+    overlapping_bits &= (uint8_t) (bits >> 3U);
+
+    return overlapping_bits != 0U;
+}
+
 #if (APP_CHASSIS_ENABLE_CURVE_SPEED_PLANNER != 0U)
 static float chassis_get_curve_speed_scale(float line_error)
 {
@@ -206,6 +216,7 @@ void app_chassis_set_enabled(bool enabled)
 {
     g_chassis.enabled = enabled;
     if (enabled) {
+        g_chassis.brake_remaining_s = 0.0F;
         g_chassis.center_mark_count = 0U;
         g_chassis.center_mark_active = false;
         g_chassis.start_line_latched = false;
@@ -220,6 +231,13 @@ void app_chassis_set_enabled(bool enabled)
         motor_dc_set_output(&g_chassis.left_motor, 0.0F);
         motor_dc_set_output(&g_chassis.right_motor, 0.0F);
     }
+}
+
+void app_chassis_brake(float duration_s)
+{
+    app_chassis_set_enabled(false);
+    g_chassis.brake_remaining_s = math_clampf(duration_s, 0.0F,
+        APP_CHASSIS_MAX_BRAKE_DURATION_S);
 }
 
 void app_chassis_set_cruise_speed_mps(float speed_mps)
@@ -239,11 +257,12 @@ void app_chassis_line_task(void)
 #if (APP_CHASSIS_ENABLE_CURVE_SPEED_PLANNER != 0U)
     float curve_speed_target;
 #endif
-    uint8_t center_hits;
+    bool line_mark_detected;
 
     line_sensor_update(&g_chassis.line_sensor);
-    center_hits = chassis_count_bits(g_chassis.line_sensor.raw_bits & APP_CHASSIS_CENTER_MARK_MASK);
-    if (center_hits >= APP_CHASSIS_CENTER_MARK_HITS) {
+    line_mark_detected =
+        chassis_has_consecutive_line_mark(g_chassis.line_sensor.raw_bits);
+    if (line_mark_detected) {
         if (!g_chassis.center_mark_active) {
             g_chassis.center_mark_active = true;
             if (g_chassis.center_mark_count < UINT8_MAX) {
@@ -319,6 +338,25 @@ void app_chassis_control_task(float control_dt_s, float elapsed_s)
     encoder_driver_update_speed(&g_chassis.encoder_driver, control_dt_s);
     left_speed = lpf1_update(&g_chassis.left_speed_filter, g_chassis.encoder_driver.left.speed_rps);
     right_speed = lpf1_update(&g_chassis.right_speed_filter, g_chassis.encoder_driver.right.speed_rps);
+
+    if (g_chassis.brake_remaining_s > 0.0F) {
+        if (g_chassis.brake_remaining_s <= control_dt_s) {
+            g_chassis.brake_remaining_s = 0.0F;
+        } else {
+            g_chassis.brake_remaining_s -= control_dt_s;
+        }
+        motor_dc_brake(&g_chassis.left_motor);
+        motor_dc_brake(&g_chassis.right_motor);
+        g_chassis.snapshot.enabled = false;
+        g_chassis.snapshot.left_speed_rps = left_speed;
+        g_chassis.snapshot.right_speed_rps = right_speed;
+        g_chassis.snapshot.left_target_rps = 0.0F;
+        g_chassis.snapshot.right_target_rps = 0.0F;
+        g_chassis.snapshot.left_output = 0.0F;
+        g_chassis.snapshot.right_output = 0.0F;
+        g_chassis.snapshot.travel_mm = chassis_get_travel_mm();
+        return;
+    }
 
     if (g_chassis.enabled && !g_chassis.line_lost_confirmed) {
         base_rps = g_chassis.cruise_speed_mps /

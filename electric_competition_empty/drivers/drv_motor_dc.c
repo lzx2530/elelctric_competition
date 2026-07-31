@@ -36,6 +36,12 @@ void motor_dc_set_output(motor_dc_handle_t *handle, float normalized_output)
     handle->command = duty;
 }
 
+void motor_dc_brake(motor_dc_handle_t *handle)
+{
+    bsp_pwm_set_motor_bridge(handle->cfg.pwm_channel, 1.0f, 1.0f);
+    handle->command = 0.0f;
+}
+
 float motor_dc_get_output(const motor_dc_handle_t *handle)
 {
     return handle->command;
