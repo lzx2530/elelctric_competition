@@ -1,9 +1,13 @@
 #include "bsp/bsp_i2c.h"
+#include "bsp/bsp_spi_imu.h"
 
 #include "ti_msp_dl_config.h"
+#include <ti/driverlib/dl_spi.h>
 
 #define BSP_I2C_TIMEOUT_LOOPS    (50000UL)
 #define BSP_I2C_MAX_BURST        (32U)
+#define BSP_SPI_IMU_TIMEOUT_LOOPS (5000U)
+#define BSP_SPI_IMU_CLOCK_DIVIDER (15U)
 
 static status_t bsp_i2c_wait_idle(void)
 {
@@ -147,4 +151,115 @@ status_t bsp_i2c_mem_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t *data, uin
     }
 
     return bsp_i2c_wait_bus_complete();
+}
+
+static void bsp_spi_imu_set_cs(bool selected)
+{
+    if (selected) {
+        DL_GPIO_clearPins(GPIOB, DL_GPIO_PIN_12);
+    } else {
+        DL_GPIO_setPins(GPIOB, DL_GPIO_PIN_12);
+    }
+}
+
+static status_t bsp_spi_imu_exchange(uint8_t tx_data, uint8_t *rx_data)
+{
+    uint32_t timeout = BSP_SPI_IMU_TIMEOUT_LOOPS;
+
+    while (DL_SPI_isTXFIFOFull(SPI1)) {
+        if (timeout-- == 0U) {
+            return STATUS_TIMEOUT;
+        }
+    }
+
+    DL_SPI_transmitData8(SPI1, tx_data);
+    timeout = BSP_SPI_IMU_TIMEOUT_LOOPS;
+    while (DL_SPI_isRXFIFOEmpty(SPI1)) {
+        if (timeout-- == 0U) {
+            return STATUS_TIMEOUT;
+        }
+    }
+
+    if (rx_data != NULL) {
+        *rx_data = DL_SPI_receiveData8(SPI1);
+    } else {
+        (void) DL_SPI_receiveData8(SPI1);
+    }
+    return STATUS_OK;
+}
+
+void bsp_spi_imu_init(void)
+{
+    static const DL_SPI_Config spi_config = {
+        .mode = DL_SPI_MODE_CONTROLLER,
+        .frameFormat = DL_SPI_FRAME_FORMAT_MOTO4_POL0_PHA0,
+        .parity = DL_SPI_PARITY_NONE,
+        .dataSize = DL_SPI_DATA_SIZE_8,
+        .bitOrder = DL_SPI_BIT_ORDER_MSB_FIRST,
+        .chipSelectPin = DL_SPI_CHIP_SELECT_NONE,
+    };
+    static const DL_SPI_ClockConfig clock_config = {
+        .clockSel = DL_SPI_CLOCK_BUSCLK,
+        .divideRatio = DL_SPI_CLOCK_DIVIDE_RATIO_1,
+    };
+
+    DL_SPI_reset(SPI1);
+    DL_SPI_enablePower(SPI1);
+    delay_cycles(320U);
+
+    DL_GPIO_initPeripheralInputFunction(IOMUX_PINCM24, IOMUX_PINCM24_PF_SPI1_POCI);
+    DL_GPIO_initPeripheralOutputFunction(IOMUX_PINCM25, IOMUX_PINCM25_PF_SPI1_PICO);
+    DL_GPIO_enableOutput(GPIOB, DL_GPIO_PIN_8);
+    DL_GPIO_initPeripheralOutputFunction(IOMUX_PINCM26, IOMUX_PINCM26_PF_SPI1_SCLK);
+    DL_GPIO_enableOutput(GPIOB, DL_GPIO_PIN_9);
+    DL_GPIO_disableInterrupt(GPIO_BUTTONS_PORT, GPIO_BUTTONS_MODE_PIN);
+    DL_GPIO_clearInterruptStatus(GPIO_BUTTONS_PORT, GPIO_BUTTONS_MODE_PIN);
+    DL_GPIO_initDigitalOutput(IOMUX_PINCM29);
+    DL_GPIO_enableOutput(GPIOB, DL_GPIO_PIN_12);
+    bsp_spi_imu_set_cs(false);
+
+    DL_SPI_setClockConfig(SPI1, (DL_SPI_ClockConfig *) &clock_config);
+    DL_SPI_init(SPI1, (DL_SPI_Config *) &spi_config);
+    DL_SPI_setBitRateSerialClockDivider(SPI1, BSP_SPI_IMU_CLOCK_DIVIDER);
+    DL_SPI_setFIFOThreshold(SPI1, DL_SPI_RX_FIFO_LEVEL_ONE_FRAME,
+        DL_SPI_TX_FIFO_LEVEL_ONE_FRAME);
+    DL_SPI_enable(SPI1);
+}
+
+status_t bsp_spi_imu_write(uint8_t reg_addr, const uint8_t *data, uint16_t length)
+{
+    status_t status;
+
+    if ((data == NULL) || (length == 0U)) {
+        return STATUS_INVALID_ARG;
+    }
+
+    bsp_spi_imu_set_cs(true);
+    status = bsp_spi_imu_exchange((uint8_t) (reg_addr & 0x7FU), NULL);
+    for (uint16_t index = 0U; (status == STATUS_OK) && (index < length); index++) {
+        status = bsp_spi_imu_exchange(data[index], NULL);
+    }
+    bsp_spi_imu_set_cs(false);
+    return status;
+}
+
+status_t bsp_spi_imu_read(uint8_t reg_addr, uint8_t *data, uint16_t length)
+{
+    status_t status;
+
+    if ((data == NULL) || (length == 0U)) {
+        return STATUS_INVALID_ARG;
+    }
+
+    while (!DL_SPI_isRXFIFOEmpty(SPI1)) {
+        (void) DL_SPI_receiveData8(SPI1);
+    }
+
+    bsp_spi_imu_set_cs(true);
+    status = bsp_spi_imu_exchange((uint8_t) (reg_addr | 0x80U), NULL);
+    for (uint16_t index = 0U; (status == STATUS_OK) && (index < length); index++) {
+        status = bsp_spi_imu_exchange(0x00U, &data[index]);
+    }
+    bsp_spi_imu_set_cs(false);
+    return status;
 }

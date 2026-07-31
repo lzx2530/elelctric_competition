@@ -44,6 +44,7 @@
 #include "bsp/bsp_i2c.h"
 #include "bsp/bsp_operator_input.h"
 #include "bsp/bsp_pwm.h"
+#include "bsp/bsp_spi_imu.h"
 #include "bsp/bsp_uart.h"
 #include "common/math_util.h"
 #include "drivers/drv_encoder_ab.h"

@@ -18,7 +18,6 @@ typedef struct {
 
 /* 当前只面向六轴使用，磁力计与 DMP 不在这个句柄中维护 */
 typedef struct {
-    uint8_t i2c_addr;
     float accel_lsb_per_g;
     float gyro_lsb_per_dps;
     mpu9250_vec3f_t gyro_bias_dps;
@@ -29,7 +28,7 @@ typedef struct {
     mpu9250_vec3f_t gyro_dps;
 } mpu9250_handle_t;
 
-status_t mpu9250_init(mpu9250_handle_t *handle, uint8_t i2c_addr);
+status_t mpu9250_init(mpu9250_handle_t *handle);
 status_t mpu9250_read_who_am_i(mpu9250_handle_t *handle, uint8_t *who_am_i);
 status_t mpu9250_read_raw(mpu9250_handle_t *handle);
 /* update 会同时刷新 raw、物理量换算值和陀螺仪偏置补偿结果 */

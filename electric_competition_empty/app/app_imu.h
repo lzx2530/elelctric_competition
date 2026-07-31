@@ -5,6 +5,7 @@
 
 typedef struct {
     bool online;
+    bool accel_bias_ready;
     uint8_t who_am_i;
     float roll_deg;
     float pitch_deg;

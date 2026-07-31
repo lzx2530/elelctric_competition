@@ -22,7 +22,8 @@ static bool proto_k230_parse_ball_report(k230_parser_t *parser, k230_frame_t *ou
     const uint8_t *payload = &parser->raw[6];
     k230_frame_t *frame = &parser->latest_frame;
 
-    if (parser->raw[3] != K230_PROTOCOL_TYPE_BALL_REPORT || parser->raw[5] != 5U) {
+    if (parser->raw[3] != K230_PROTOCOL_TYPE_BALL_REPORT ||
+        (parser->raw[5] != 5U && parser->raw[5] != 7U)) {
         return false;
     }
 

@@ -45,9 +45,10 @@ empty.o: ../empty.c ../app/app_chassis.h \
  ../algo/algo_filter.h ../algo/algo_fusion.h ../algo/algo_pid.h \
  ../bsp/bsp_gpio.h ../bsp/bsp_i2c.h \
  D:/ccs/elelctric_competition/electric_competition_empty/common/status.h \
- ../bsp/bsp_operator_input.h ../bsp/bsp_pwm.h ../bsp/bsp_uart.h \
- ../common/math_util.h ../drivers/drv_encoder_ab.h \
- ../drivers/drv_line_sensor.h ../drivers/drv_motor_dc.h \
+ ../bsp/bsp_operator_input.h ../bsp/bsp_pwm.h ../bsp/bsp_spi_imu.h \
+ ../bsp/bsp_uart.h ../common/math_util.h ../drivers/drv_encoder_ab.h \
+ ../drivers/drv_abs_position.h ../drivers/drv_line_sensor.h \
+ ../drivers/drv_motor_dc.h \
  D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_pwm.h \
  ../drivers/drv_mpu9250.h ../drivers/drv_oled_ssd1306.h \
  ../drivers/drv_stepper.h \
@@ -159,9 +160,11 @@ D:/ccs/elelctric_competition/electric_competition_empty/app/app_mission.h:
 D:/ccs/elelctric_competition/electric_competition_empty/common/status.h:
 ../bsp/bsp_operator_input.h:
 ../bsp/bsp_pwm.h:
+../bsp/bsp_spi_imu.h:
 ../bsp/bsp_uart.h:
 ../common/math_util.h:
 ../drivers/drv_encoder_ab.h:
+../drivers/drv_abs_position.h:
 ../drivers/drv_line_sensor.h:
 ../drivers/drv_motor_dc.h:
 D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_pwm.h:

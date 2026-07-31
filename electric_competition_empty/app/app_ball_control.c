@@ -150,7 +150,7 @@ void app_ball_control_init(void)
 {
     stepper_init(&g_ball.stepper, &g_pitch_stepper_cfg);
     stepper_enable(&g_ball.stepper, true);
-    abs_position_init(&g_ball.actuator_encoder, 0.01F, 0.99F);
+    abs_position_init(&g_ball.actuator_encoder, 0.0F, 1.0F);
     pid_init(&g_ball.actuator_pid, &g_actuator_pid_cfg, PID_MODE_POSITION);
     ball_observer_reset();
     g_ball.snapshot.target_mm = 0;

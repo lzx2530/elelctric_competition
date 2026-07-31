@@ -4,6 +4,7 @@ bsp/bsp_i2c.o: ../bsp/bsp_i2c.c \
  D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_i2c.h \
  D:/ccs/elelctric_competition/electric_competition_empty/common/status.h \
  D:/ccs/elelctric_competition/electric_competition_empty/common/types.h \
+ D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_spi_imu.h \
  ti_msp_dl_config.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/msp.h \
  D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/DeviceFamily.h \
@@ -90,6 +91,7 @@ bsp/bsp_i2c.o: ../bsp/bsp_i2c.c \
 D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_i2c.h:
 D:/ccs/elelctric_competition/electric_competition_empty/common/status.h:
 D:/ccs/elelctric_competition/electric_competition_empty/common/types.h:
+D:/ccs/elelctric_competition/electric_competition_empty/bsp/bsp_spi_imu.h:
 ti_msp_dl_config.h:
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/msp/msp.h:
 D:/ccs/mspm0_sdk/mspm0_sdk_2_10_00_04/source/ti/devices/DeviceFamily.h:

@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "bsp/bsp_i2c.h"
+#include "bsp/bsp_spi_imu.h"
 #include <ti/driverlib/dl_common.h>
 #include <ti/driverlib/m0p/dl_core.h>
 
@@ -15,42 +15,41 @@
 #define MPU9250_REG_ACCEL_CONFIG2  (0x1DU)
 #define MPU9250_REG_ACCEL_XOUT_H   (0x3BU)
 
-status_t mpu9250_init(mpu9250_handle_t *handle, uint8_t i2c_addr)
+status_t mpu9250_init(mpu9250_handle_t *handle)
 {
     uint8_t value;
 
     memset(handle, 0, sizeof(*handle));
     /* 起步版固定用 ±2g / ±250dps，换算简单，调试也直观。 */
-    handle->i2c_addr = i2c_addr;
     handle->accel_lsb_per_g = 16384.0f;
     handle->gyro_lsb_per_dps = 131.0f;
 
     value = 0x80U;
-    if (bsp_i2c_mem_write(i2c_addr, MPU9250_REG_PWR_MGMT_1, &value, 1U) != STATUS_OK) {
+    if (bsp_spi_imu_write(MPU9250_REG_PWR_MGMT_1, &value, 1U) != STATUS_OK) {
         return STATUS_ERROR;
     }
     delay_cycles(320000U);
 
     value = 0x01U;
-    if (bsp_i2c_mem_write(i2c_addr, MPU9250_REG_PWR_MGMT_1, &value, 1U) != STATUS_OK) {
+    if (bsp_spi_imu_write(MPU9250_REG_PWR_MGMT_1, &value, 1U) != STATUS_OK) {
         return STATUS_ERROR;
     }
 
     value = 0x00U;
-    if (bsp_i2c_mem_write(i2c_addr, MPU9250_REG_PWR_MGMT_2, &value, 1U) != STATUS_OK) {
+    if (bsp_spi_imu_write(MPU9250_REG_PWR_MGMT_2, &value, 1U) != STATUS_OK) {
         return STATUS_ERROR;
     }
-    if (bsp_i2c_mem_write(i2c_addr, MPU9250_REG_CONFIG, &value, 1U) != STATUS_OK) {
+    if (bsp_spi_imu_write(MPU9250_REG_CONFIG, &value, 1U) != STATUS_OK) {
         return STATUS_ERROR;
     }
-    if (bsp_i2c_mem_write(i2c_addr, MPU9250_REG_GYRO_CONFIG, &value, 1U) != STATUS_OK) {
+    if (bsp_spi_imu_write(MPU9250_REG_GYRO_CONFIG, &value, 1U) != STATUS_OK) {
         return STATUS_ERROR;
     }
-    if (bsp_i2c_mem_write(i2c_addr, MPU9250_REG_ACCEL_CONFIG, &value, 1U) != STATUS_OK) {
+    if (bsp_spi_imu_write(MPU9250_REG_ACCEL_CONFIG, &value, 1U) != STATUS_OK) {
         return STATUS_ERROR;
     }
     value = 0x03U;
-    if (bsp_i2c_mem_write(i2c_addr, MPU9250_REG_ACCEL_CONFIG2, &value, 1U) != STATUS_OK) {
+    if (bsp_spi_imu_write(MPU9250_REG_ACCEL_CONFIG2, &value, 1U) != STATUS_OK) {
         return STATUS_ERROR;
     }
 
@@ -59,14 +58,14 @@ status_t mpu9250_init(mpu9250_handle_t *handle, uint8_t i2c_addr)
 
 status_t mpu9250_read_who_am_i(mpu9250_handle_t *handle, uint8_t *who_am_i)
 {
-    return bsp_i2c_mem_read(handle->i2c_addr, MPU9250_REG_WHO_AM_I, who_am_i, 1U);
+    return bsp_spi_imu_read(MPU9250_REG_WHO_AM_I, who_am_i, 1U);
 }
 
 status_t mpu9250_read_raw(mpu9250_handle_t *handle)
 {
     uint8_t raw[14];
 
-    if (bsp_i2c_mem_read(handle->i2c_addr, MPU9250_REG_ACCEL_XOUT_H, raw, sizeof(raw)) != STATUS_OK) {
+    if (bsp_spi_imu_read(MPU9250_REG_ACCEL_XOUT_H, raw, sizeof(raw)) != STATUS_OK) {
         return STATUS_ERROR;
     }
 
