@@ -9,9 +9,9 @@
 #define APP_BALL_CONTROL_PERIOD_S         (0.03333333F)
 #define APP_BALL_CAMERA_DELAY_FRAMES      (2U)
 #define APP_BALL_OBSERVER_HISTORY_LENGTH  (APP_BALL_CAMERA_DELAY_FRAMES)
-#define APP_BALL_MAX_TILT_RAD            (0.104720F)
-#define APP_BALL_NEUTRAL_ACTUATOR        (0.500F)
-#define APP_BALL_ACTUATOR_PER_RAD        (1.250F)
+#define APP_BALL_MAX_TILT_RAD            (0.069813F)
+#define APP_BALL_ACTUATOR_TURNS_PER_RAD  (152.000F)
+#define APP_BALL_MAX_ACTUATOR_OFFSET_TURNS (16.000F)
 #define APP_BALL_COMMAND_SIGN            (1.0F)
 #define APP_BALL_G_MPS2                  (9.80665F)
 #define APP_BALL_BETA                    (1.400F)
@@ -22,6 +22,7 @@
 #define APP_BALL_INTEGRAL_LIMIT_MS        (0.500F)
 #define APP_BALL_KF_K_POSITION            (0.541505F)
 #define APP_BALL_KF_K_VELOCITY            (6.254990F)
+#define APP_BALL_PREVIEW_TIME_S            (1.000F)
 #define APP_BALL_FRICTION_BREAK_RAD       (0.011999F)
 #define APP_BALL_BREAK_ENGAGE_M           (0.0010F)
 #define APP_BALL_BREAK_RELEASE_M          (0.0003F)
@@ -38,9 +39,11 @@ typedef struct {
     float input_tilt_rad[APP_BALL_OBSERVER_HISTORY_LENGTH];
     float input_ax_mps2[APP_BALL_OBSERVER_HISTORY_LENGTH];
     float error_integral_ms;
+    float actuator_reference_turns;
     int8_t break_direction;
     bool observer_initialized;
     bool vision_sample_pending;
+    bool actuator_reference_valid;
 } ball_control_app_t;
 
 static ball_control_app_t g_ball;
@@ -50,8 +53,8 @@ static const stepper_config_t g_pitch_stepper_cfg = {
     .dir_output = BSP_DIR_PITCH,
     .invert_direction = false,
     .min_frequency_hz = 5.0F,
-    .max_frequency_hz = 4000.0F,
-    .accel_hz_per_s = 8000.0F,
+    .max_frequency_hz = 8000.0F,
+    .accel_hz_per_s = 16000.0F,
 };
 
 static const pid_config_t g_actuator_pid_cfg = {
@@ -59,7 +62,7 @@ static const pid_config_t g_actuator_pid_cfg = {
     .ki = 300.0F,
     .kd = 40.0F,
     .dt_s = 0.001F,
-    .output_limit = 3500.0F,
+    .output_limit = 8000.0F,
     .integral_limit = 0.15F,
     .integral_separation = 0.10F,
     .derivative_lpf_alpha = 0.10F,
@@ -147,11 +150,11 @@ void app_ball_control_init(void)
 {
     stepper_init(&g_ball.stepper, &g_pitch_stepper_cfg);
     stepper_enable(&g_ball.stepper, true);
-    abs_position_init(&g_ball.actuator_encoder, 0.02F, 0.98F);
+    abs_position_init(&g_ball.actuator_encoder, 0.01F, 0.99F);
     pid_init(&g_ball.actuator_pid, &g_actuator_pid_cfg, PID_MODE_POSITION);
     ball_observer_reset();
     g_ball.snapshot.target_mm = 0;
-    g_ball.snapshot.actuator_target = APP_BALL_NEUTRAL_ACTUATOR;
+    g_ball.snapshot.actuator_target = 0.0F;
 }
 
 void app_ball_control_set_enabled(bool enabled)
@@ -165,7 +168,14 @@ void app_ball_control_set_enabled(bool enabled)
         g_ball.snapshot.tilt_command_rad = 0.0F;
         g_ball.snapshot.tilt_feedback_rad = 0.0F;
         g_ball.snapshot.tilt_feedforward_rad = 0.0F;
-        g_ball.snapshot.actuator_target = APP_BALL_NEUTRAL_ACTUATOR;
+        g_ball.snapshot.actuator_target = 0.0F;
+        if (enabled && g_ball.actuator_encoder.valid) {
+            g_ball.actuator_reference_turns = g_ball.actuator_encoder.multi_turn_position;
+            g_ball.actuator_reference_valid = true;
+            g_ball.snapshot.actuator_feedback = 0.0F;
+        } else {
+            g_ball.actuator_reference_valid = false;
+        }
     }
 }
 
@@ -211,7 +221,19 @@ void app_ball_control_set_actuator_pwm(uint32_t high_ticks, uint32_t period_tick
 {
     abs_position_update_pwm(&g_ball.actuator_encoder, high_ticks, period_ticks);
     g_ball.snapshot.actuator_feedback_valid = g_ball.actuator_encoder.valid;
-    g_ball.snapshot.actuator_feedback = g_ball.actuator_encoder.position;
+    if (!g_ball.actuator_encoder.valid) {
+        return;
+    }
+
+    g_ball.snapshot.actuator_phase = g_ball.actuator_encoder.position;
+    if (g_ball.snapshot.enabled && !g_ball.actuator_reference_valid) {
+        g_ball.actuator_reference_turns = g_ball.actuator_encoder.multi_turn_position;
+        g_ball.actuator_reference_valid = true;
+    }
+    if (g_ball.actuator_reference_valid) {
+        g_ball.snapshot.actuator_feedback = g_ball.actuator_encoder.multi_turn_position -
+            g_ball.actuator_reference_turns;
+    }
 }
 
 void app_ball_control_outer_task(const imu_snapshot_t *imu, uint32_t tick_ms)
@@ -222,8 +244,10 @@ void app_ball_control_outer_task(const imu_snapshot_t *imu, uint32_t tick_ms)
     float desired_accel_mps2;
     float unsaturated_tilt_rad;
     float tilt_command_rad;
+    float actual_tilt_rad;
     float estimated_error_mm;
     float estimated_velocity_mmps;
+    float preview_error_mm;
 
     if (!g_ball.snapshot.enabled) {
         return;
@@ -250,7 +274,9 @@ void app_ball_control_outer_task(const imu_snapshot_t *imu, uint32_t tick_ms)
     g_ball.snapshot.estimated_error_mm = estimated_error_mm;
     g_ball.snapshot.ball_velocity_mmps = estimated_velocity_mmps;
 
-    error_m = -0.001F * estimated_error_mm;
+    preview_error_mm = estimated_error_mm +
+        APP_BALL_PREVIEW_TIME_S * estimated_velocity_mmps;
+    error_m = -0.001F * preview_error_mm;
     velocity_error_mps = -0.001F * estimated_velocity_mmps;
     desired_accel_mps2 = APP_BALL_KP * error_m + APP_BALL_KD * velocity_error_mps +
         APP_BALL_KI * g_ball.error_integral_ms;
@@ -282,9 +308,12 @@ void app_ball_control_outer_task(const imu_snapshot_t *imu, uint32_t tick_ms)
             -APP_BALL_INTEGRAL_LIMIT_MS, APP_BALL_INTEGRAL_LIMIT_MS);
     }
     g_ball.snapshot.tilt_command_rad = tilt_command_rad;
-    g_ball.snapshot.actuator_target = math_clampf(APP_BALL_NEUTRAL_ACTUATOR +
-        APP_BALL_COMMAND_SIGN * APP_BALL_ACTUATOR_PER_RAD * tilt_command_rad, 0.05F, 0.95F);
-    ball_observer_advance(APP_BALL_COMMAND_SIGN * tilt_command_rad, ax_mps2);
+    g_ball.snapshot.actuator_target = math_clampf(
+        APP_BALL_COMMAND_SIGN * APP_BALL_ACTUATOR_TURNS_PER_RAD * tilt_command_rad,
+        -APP_BALL_MAX_ACTUATOR_OFFSET_TURNS, APP_BALL_MAX_ACTUATOR_OFFSET_TURNS);
+    actual_tilt_rad = APP_BALL_COMMAND_SIGN * g_ball.snapshot.actuator_feedback /
+        APP_BALL_ACTUATOR_TURNS_PER_RAD;
+    ball_observer_advance(actual_tilt_rad, ax_mps2);
     g_ball.snapshot.fault = APP_BALL_FAULT_NONE;
 }
 

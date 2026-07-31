@@ -13,6 +13,8 @@ void bsp_uart_debug_printf(const char *fmt, ...);
 ringbuf_t *bsp_uart_get_debug_ringbuf(void);
 /* 协议层从这里取接收环形缓冲区 */
 ringbuf_t *bsp_uart_get_k230_ringbuf(void);
+void bsp_uart_get_k230_rx_diagnostics(uint32_t *byte_count, uint32_t *drop_count,
+    uint32_t *error_count);
 void bsp_uart_debug_irq_handler(void);
 void bsp_uart_k230_irq_handler(void);
 

@@ -25,6 +25,7 @@ typedef struct {
     float tilt_command_rad;
     float tilt_feedback_rad;
     float tilt_feedforward_rad;
+    float actuator_phase;
     float actuator_target;
     float actuator_feedback;
     float stepper_command_hz;

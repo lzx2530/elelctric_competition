@@ -10,6 +10,9 @@ typedef struct {
     float pitch_deg;
     float yaw_deg;
     float gyro_z_dps;
+    float accel_x_g;
+    float accel_y_g;
+    float accel_z_g;
     float longitudinal_accel_mps2;
 } imu_snapshot_t;
 

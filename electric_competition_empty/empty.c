@@ -47,6 +47,7 @@
 #include "bsp/bsp_uart.h"
 #include "common/math_util.h"
 #include "drivers/drv_encoder_ab.h"
+#include "drivers/drv_abs_position.h"
 #include "drivers/drv_line_sensor.h"
 #include "drivers/drv_motor_dc.h"
 #include "drivers/drv_mpu9250.h"
@@ -65,11 +66,13 @@ typedef enum {
     APP_RUN_MODE_ACTUATOR_SINE_TEST = 2,
     APP_RUN_MODE_PA8_INPUT_TEST = 3,
     APP_RUN_MODE_LINE_TRACKING_TEST = 4,
+    APP_RUN_MODE_LEAD_SCREW_TEST = 5,
+    APP_RUN_MODE_ACTUATOR_RESPONSE_TEST = 6,
 } app_run_mode_t;
 
-#define APP_ENABLE_OLED_UI       (0U)
+#define APP_ENABLE_OLED_UI       (1U)
 #define APP_ENABLE_VOFA_STREAM   (1U)
-#define APP_ENABLE_TEXT_DEBUG    (0U)
+#define APP_ENABLE_TEXT_DEBUG    (1U)
 
 typedef struct {
     oled_handle_t oled;
@@ -121,6 +124,8 @@ static void run_vehicle_app(bool line_tracking_test);
 static void run_bringup_test(void);
 static void run_actuator_sine_test(void);
 static void run_pa8_input_test(void);
+static void run_lead_screw_test(void);
+static void run_actuator_response_test(void);
 static void bringup_test_init(bringup_test_context_t *ctx);
 static void bringup_test_process(bringup_test_context_t *ctx, const scheduler_flags_t *flags);
 static void bringup_test_poll_debug_command(bringup_test_context_t *ctx);
@@ -146,6 +151,10 @@ int main(void)
         run_pa8_input_test();
     } else if (app_mode == APP_RUN_MODE_LINE_TRACKING_TEST) {
         run_vehicle_app(true);
+    } else if (app_mode == APP_RUN_MODE_LEAD_SCREW_TEST) {
+        run_lead_screw_test();
+    } else if (app_mode == APP_RUN_MODE_ACTUATOR_RESPONSE_TEST) {
+        run_actuator_response_test();
     } else {
         run_vehicle_app(false);
     }
@@ -160,6 +169,7 @@ static void run_vehicle_app(bool line_tracking_test)
     uint32_t last_chassis_control_tick_ms = 0U;
     uint32_t last_k230_log_tick_ms = 0U;
     uint32_t k230_position_frame_count = 0U;
+    uint32_t k230_task_start_frame_count = 0U;
 #if APP_ENABLE_TEXT_DEBUG
     uint32_t last_abs_pwm_high_ticks = 0U;
     uint32_t last_abs_pwm_period_ticks = 0U;
@@ -168,19 +178,17 @@ static void run_vehicle_app(bool line_tracking_test)
     ringbuf_t *k230_ringbuf;
 #if APP_ENABLE_VOFA_STREAM
     static const proto_vofa_firewater_mode_t vofa_mode = PROTO_VOFA_FIREWATER_MODE_RAW;
-    static const char *const vofa_names[12] = {
-        "line_error",
-        "line_bits",
-        "line_state",
-        "line_lost",
-        "left_target_rps",
-        "right_target_rps",
-        "left_speed_rps",
-        "right_speed_rps",
-        "left_output",
-        "right_output",
+    static const char *const vofa_names[10] = {
+        "task_mode",
         "mission_state",
         "elapsed_s",
+        "ball_error_mm",
+        "ball_velocity_mmps",
+        "actuator_feedback",
+        "actuator_target",
+        "stepper_command_hz",
+        "stepper_pwm_hz",
+        "ball_fault",
     };
 #endif
 
@@ -190,6 +198,7 @@ static void run_vehicle_app(bool line_tracking_test)
     bsp_operator_input_init();
     bsp_pwm_init();
     bsp_i2c_init();
+    bsp_spi_imu_init();
     bsp_uart_init();
     bsp_uart_enable_irqs();
     bsp_pwm_start_all();
@@ -233,6 +242,10 @@ static void run_vehicle_app(bool line_tracking_test)
             (!mode_press_seen ||
                 ((scheduler_flags.tick_ms - last_mode_press_ms) >= 200U))) {
             app_mission_next_mode();
+#if APP_ENABLE_TEXT_DEBUG
+            bsp_uart_debug_printf("[LOCAL] MODE task=%u\r\n",
+                (unsigned) app_mission_get_snapshot()->mode);
+#endif
             mode_press_seen = true;
             last_mode_press_ms = scheduler_flags.tick_ms;
         }
@@ -240,6 +253,10 @@ static void run_vehicle_app(bool line_tracking_test)
             (!start_press_seen ||
                 ((scheduler_flags.tick_ms - last_start_press_ms) >= 200U))) {
             app_mission_start(scheduler_flags.tick_ms);
+#if APP_ENABLE_TEXT_DEBUG
+            bsp_uart_debug_printf("[LOCAL] START task=%u\r\n",
+                (unsigned) app_mission_get_snapshot()->mode);
+#endif
             start_press_seen = true;
             last_start_press_ms = scheduler_flags.tick_ms;
         }
@@ -254,6 +271,7 @@ static void run_vehicle_app(bool line_tracking_test)
         while ((!line_tracking_test) &&
             proto_k230_process_ringbuf(&k230_parser, k230_ringbuf, &frame)) {
             if (frame.type == K230_PROTOCOL_TYPE_TASK_START) {
+                k230_task_start_frame_count++;
                 app_mission_start_from_k230(frame.task_flag, scheduler_flags.tick_ms);
                 bsp_uart_debug_printf("[K230] TASK_START flag=%u\r\n", (unsigned) frame.task_flag);
             } else if (frame.type == K230_PROTOCOL_TYPE_BALL_REPORT) {
@@ -290,22 +308,28 @@ static void run_vehicle_app(bool line_tracking_test)
             last_chassis_control_tick_ms = scheduler_flags.tick_ms;
             chassis_elapsed_s = 0.001f * (float) elapsed_ms;
             app_chassis_control_task(0.001f, chassis_elapsed_s);
-            app_ball_control_inner_task(0.001f);
+            app_ball_control_inner_task(chassis_elapsed_s);
         }
         if ((APP_ENABLE_OLED_UI != 0U) && scheduler_flags.oled_50ms) {
             app_ui_refresh(app_chassis_get_snapshot(), app_ball_control_get_snapshot(),
                 app_mission_get_snapshot());
         }
         if (scheduler_flags.debug_100ms) {
+#if (APP_ENABLE_TEXT_DEBUG != 0U) || (APP_ENABLE_VOFA_STREAM != 0U)
+            const mission_snapshot_t *mission = app_mission_get_snapshot();
+            const ball_control_snapshot_t *ball = app_ball_control_get_snapshot();
+#endif
 #if APP_ENABLE_TEXT_DEBUG
             uint32_t capture_count;
             uint32_t timeout_count;
             uint32_t invalid_count;
             uint32_t duty_permille = 0U;
-            const mission_snapshot_t *mission = app_mission_get_snapshot();
-            const ball_control_snapshot_t *ball = app_ball_control_get_snapshot();
-
+            uint32_t k230_rx_byte_count;
+            uint32_t k230_rx_drop_count;
+            uint32_t k230_rx_error_count;
             bsp_operator_input_get_abs_pwm_diagnostics(&capture_count, &timeout_count, &invalid_count);
+            bsp_uart_get_k230_rx_diagnostics(&k230_rx_byte_count, &k230_rx_drop_count,
+                &k230_rx_error_count);
             if (last_abs_pwm_period_ticks != 0U) {
                 duty_permille = (last_abs_pwm_high_ticks * 1000U) / last_abs_pwm_period_ticks;
             }
@@ -326,30 +350,33 @@ static void run_vehicle_app(bool line_tracking_test)
                 (unsigned long) last_abs_pwm_high_ticks,
                 (unsigned long) last_abs_pwm_period_ticks,
                 (unsigned long) duty_permille);
+            bsp_uart_debug_printf("[K230-RX] bytes=%lu drop=%lu error=%lu queued=%u task=%lu ball=%lu\r\n",
+                (unsigned long) k230_rx_byte_count,
+                (unsigned long) k230_rx_drop_count,
+                (unsigned long) k230_rx_error_count,
+                (unsigned) ringbuf_size(k230_ringbuf),
+                (unsigned long) k230_task_start_frame_count,
+                (unsigned long) k230_position_frame_count);
 #endif
 #if APP_ENABLE_VOFA_STREAM
-            const chassis_snapshot_t *chassis = app_chassis_get_snapshot();
             proto_vofa_firewater_packet_t vofa_packet;
             /* Keep one fixed set of debug variables and switch only the text formatting mode. */
-            const mission_snapshot_t *mission = app_mission_get_snapshot();
-            float vofa_channels[12] = {
-                chassis->line_error,
-                (float) chassis->line_bits,
-                (float) chassis->line_state,
-                chassis->line_lost ? 1.0f : 0.0f,
-                chassis->left_target_rps,
-                chassis->right_target_rps,
-                chassis->left_speed_rps,
-                chassis->right_speed_rps,
-                chassis->left_output,
-                chassis->right_output,
+            float vofa_channels[10] = {
+                (float) mission->mode,
                 (float) mission->state,
                 0.001F * (float) mission->elapsed_ms,
+                ball->estimated_error_mm,
+                ball->ball_velocity_mmps,
+                ball->actuator_feedback,
+                ball->actuator_target,
+                ball->stepper_command_hz,
+                bsp_pwm_get_step_frequency(BSP_STEPPER_AXIS_PITCH),
+                (float) ball->fault,
             };
             vofa_packet.mode = vofa_mode;
             vofa_packet.names = vofa_names;
             vofa_packet.data = vofa_channels;
-            vofa_packet.count = 12U;
+            vofa_packet.count = 10U;
             proto_vofa_firewater_send_packet(&vofa_packet);
 #endif
             bsp_gpio_toggle_led();
@@ -463,6 +490,279 @@ static void run_actuator_sine_test(void)
             }
             pa8_high_samples = 0U;
             pa8_total_samples = 0U;
+        }
+    }
+}
+
+static void run_actuator_response_test(void)
+{
+    scheduler_flags_t scheduler_flags;
+    abs_position_handle_t encoder;
+    stepper_handle_t stepper;
+    pid_handle_t position_pid;
+    static const stepper_config_t stepper_cfg = {
+        .axis = BSP_STEPPER_AXIS_PITCH,
+        .dir_output = BSP_DIR_PITCH,
+        .invert_direction = false,
+        .min_frequency_hz = 5.0F,
+        .max_frequency_hz = 8000.0F,
+        .accel_hz_per_s = 16000.0F,
+    };
+    static const pid_config_t position_pid_cfg = {
+        .kp = 7000.0F,
+        .ki = 300.0F,
+        .kd = 40.0F,
+        .dt_s = 0.001F,
+        .output_limit = 8000.0F,
+        .integral_limit = 0.15F,
+        .integral_separation = 0.10F,
+        .derivative_lpf_alpha = 0.10F,
+        .setpoint_slew_rate = 0.0F,
+        .deadband = 0.001F,
+        .derivative_on_measurement = true,
+        .enable_integral_separation = true,
+        .enable_output_limit = true,
+        .enable_integral_limit = true,
+        .enable_deadband = true,
+        .enable_setpoint_ramp = false,
+    };
+    const float test_turns = 2.0F;
+    const float settle_tolerance_turns = 0.03F;
+    const uint32_t settle_time_ms = 300U;
+    const uint32_t phase_timeout_ms = 6000U;
+    const uint32_t capture_timeout_ms = 300U;
+    float feedback_turns = 0.0F;
+    float reference_turns = 0.0F;
+    float target_turns = 0.0F;
+    float command_hz = 0.0F;
+    uint32_t start_tick_ms = 0U;
+    uint32_t phase_tick_ms = 0U;
+    uint32_t last_capture_tick_ms = 0U;
+    uint32_t last_control_tick_ms = 0U;
+    uint8_t stage = 0U;
+
+    SYSCFG_DL_init();
+    bsp_gpio_init();
+    bsp_operator_input_init();
+    bsp_pwm_init();
+    bsp_uart_init();
+    bsp_uart_enable_irqs();
+    bsp_pwm_start_all();
+    app_control_scheduler_init();
+    abs_position_init(&encoder, 0.01F, 0.99F);
+    stepper_init(&stepper, &stepper_cfg);
+    stepper_enable(&stepper, true);
+    pid_init(&position_pid, &position_pid_cfg, PID_MODE_POSITION);
+    bsp_uart_debug_printf("actuator response: waiting encoder, then +2.0 -> -2.0 turns\r\n");
+
+    while (1) {
+        uint32_t high_ticks;
+        uint32_t period_ticks;
+
+        app_control_scheduler_fetch(&scheduler_flags);
+        if (bsp_operator_input_take_abs_pwm(&high_ticks, &period_ticks)) {
+            abs_position_update_pwm(&encoder, high_ticks, period_ticks);
+            if (encoder.valid) {
+                last_capture_tick_ms = scheduler_flags.tick_ms;
+                if (stage == 0U) {
+                    reference_turns = encoder.multi_turn_position;
+                    start_tick_ms = scheduler_flags.tick_ms;
+                    phase_tick_ms = scheduler_flags.tick_ms;
+                    stage = 1U;
+                    target_turns = test_turns;
+                    bsp_uart_debug_printf("actuator response: start +2.0 turns\r\n");
+                }
+                feedback_turns = encoder.multi_turn_position - reference_turns;
+            }
+        }
+
+        if (scheduler_flags.control_1khz) {
+            uint32_t elapsed_ms = scheduler_flags.tick_ms - last_control_tick_ms;
+            float elapsed_s = 0.001F * (float) elapsed_ms;
+
+            last_control_tick_ms = scheduler_flags.tick_ms;
+            if ((stage >= 1U) && (stage <= 4U) &&
+                ((scheduler_flags.tick_ms - last_capture_tick_ms) > capture_timeout_ms ||
+                    (scheduler_flags.tick_ms - phase_tick_ms) > phase_timeout_ms)) {
+                stage = 6U;
+                stepper_stop(&stepper);
+                bsp_uart_debug_printf("actuator response: capture/phase timeout\r\n");
+            } else if (stage == 1U) {
+                if (math_absf(target_turns - feedback_turns) <= settle_tolerance_turns) {
+                    stage = 2U;
+                    phase_tick_ms = scheduler_flags.tick_ms;
+                }
+            } else if (stage == 2U) {
+                if ((scheduler_flags.tick_ms - phase_tick_ms) >= settle_time_ms) {
+                    stage = 3U;
+                    target_turns = -test_turns;
+                    phase_tick_ms = scheduler_flags.tick_ms;
+                    bsp_uart_debug_printf("actuator response: switch -2.0 turns\r\n");
+                }
+            } else if (stage == 3U) {
+                if (math_absf(target_turns - feedback_turns) <= settle_tolerance_turns) {
+                    stage = 4U;
+                    phase_tick_ms = scheduler_flags.tick_ms;
+                }
+            } else if (stage == 4U &&
+                (scheduler_flags.tick_ms - phase_tick_ms) >= settle_time_ms) {
+                stage = 5U;
+                stepper_stop(&stepper);
+                bsp_uart_debug_printf("actuator response: done\r\n");
+            }
+
+            if ((stage >= 1U) && (stage <= 4U)) {
+                command_hz = pid_update(&position_pid, target_turns, feedback_turns);
+                stepper_set_speed(&stepper, command_hz);
+                stepper_update(&stepper, elapsed_s);
+            } else if (stage != 5U) {
+                command_hz = 0.0F;
+            }
+        }
+
+        if (scheduler_flags.debug_100ms) {
+            float vofa_channels[7] = {
+                0.001F * (float) (scheduler_flags.tick_ms - start_tick_ms),
+                target_turns,
+                feedback_turns,
+                target_turns - feedback_turns,
+                command_hz,
+                bsp_pwm_get_step_frequency(BSP_STEPPER_AXIS_PITCH),
+                (float) stage,
+            };
+
+            proto_vofa_firewater_send(vofa_channels, 7U);
+            bsp_uart_debug_printf("response t=%.3fs stage=%u fb=%.3f tgt=%.3f cmd=%.0fHz pwm=%.0fHz\r\n",
+                vofa_channels[0], (unsigned) stage, feedback_turns, target_turns,
+                command_hz, vofa_channels[5]);
+        }
+    }
+}
+
+static void run_lead_screw_test(void)
+{
+    scheduler_flags_t scheduler_flags;
+    abs_position_handle_t encoder;
+    const float target_revolutions = 12.0F;
+    const float test_command_hz = -400.0F;
+    const uint32_t encoder_timeout_ms = 300U;
+    const uint32_t test_timeout_ms = 120000U;
+    bool encoder_started = false;
+    bool test_done = false;
+    float traveled_revolutions = 0.0F;
+    float last_position = 0.0F;
+    float encoder_duty = 0.0F;
+    uint32_t start_tick_ms = 0U;
+    uint32_t last_encoder_tick_ms = 0U;
+    uint32_t last_timer_count = 0U;
+    uint16_t timer_count_changes = 0U;
+    bool test_timed_out = false;
+    bool pwm_started = false;
+
+    SYSCFG_DL_init();
+    bsp_gpio_init();
+    bsp_operator_input_init();
+    bsp_pwm_init();
+    bsp_uart_init();
+    bsp_uart_enable_irqs();
+    bsp_pwm_start_all();
+    app_control_scheduler_init();
+
+    DL_GPIO_initPeripheralOutputFunction(GPIO_PWM_STEP_PITCH_C0_IOMUX,
+        GPIO_PWM_STEP_PITCH_C0_IOMUX_FUNC);
+    DL_GPIO_enableOutput(GPIO_PWM_STEP_PITCH_C0_PORT, GPIO_PWM_STEP_PITCH_C0_PIN);
+    bsp_gpio_set_dir_output(BSP_DIR_PITCH, false);
+    abs_position_init(&encoder, 0.01F, 0.99F);
+    bsp_uart_debug_printf(
+        "lead screw return: DIR=LOW, STEP=400Hz for %.1f motor turns\r\n",
+        target_revolutions);
+
+    while (1) {
+        uint32_t high_ticks;
+        uint32_t period_ticks;
+
+        app_control_scheduler_fetch(&scheduler_flags);
+        if (bsp_operator_input_take_abs_pwm(&high_ticks, &period_ticks)) {
+            encoder_duty = period_ticks != 0U ?
+                (float) high_ticks / (float) period_ticks : 0.0F;
+            abs_position_update_pwm(&encoder, high_ticks, period_ticks);
+            last_encoder_tick_ms = scheduler_flags.tick_ms;
+            if (encoder.valid) {
+                if (!encoder_started) {
+                    encoder_started = true;
+                    start_tick_ms = scheduler_flags.tick_ms;
+                    last_position = encoder.position;
+                    bsp_uart_debug_printf("lead screw test: encoder ready, starting\r\n");
+                } else if (!test_done) {
+                    float position_delta = encoder.position - last_position;
+
+                    if (position_delta > 0.50F) {
+                        position_delta -= 1.0F;
+                    } else if (position_delta < -0.50F) {
+                        position_delta += 1.0F;
+                    }
+                    if (math_absf(position_delta) <= 0.20F) {
+                        traveled_revolutions += position_delta;
+                    }
+                    if (math_absf(traveled_revolutions) >= target_revolutions) {
+                        test_done = true;
+                        bsp_pwm_stop_step(BSP_STEPPER_AXIS_PITCH);
+                        bsp_uart_debug_printf(
+                            "lead screw test: done %.3f turns, measure nut travel in mm\r\n",
+                            math_absf(traveled_revolutions));
+                    }
+                    last_position = encoder.position;
+                }
+            }
+        }
+
+        if (scheduler_flags.control_1khz && encoder_started && !test_done) {
+            if (((scheduler_flags.tick_ms - start_tick_ms) > test_timeout_ms) ||
+                ((scheduler_flags.tick_ms - last_encoder_tick_ms) > encoder_timeout_ms)) {
+                test_done = true;
+                test_timed_out = true;
+                bsp_pwm_stop_step(BSP_STEPPER_AXIS_PITCH);
+                bsp_uart_debug_printf("lead screw test: stopped, encoder/test timeout\r\n");
+            } else {
+                if (!pwm_started) {
+                    bsp_pwm_set_step_frequency(BSP_STEPPER_AXIS_PITCH, 400.0F);
+                    pwm_started = true;
+                    last_timer_count = DL_TimerG_getTimerCount(PWM_STEP_PITCH_INST);
+                } else {
+                    uint32_t timer_count = DL_TimerG_getTimerCount(PWM_STEP_PITCH_INST);
+
+                    if (timer_count != last_timer_count) {
+                        timer_count_changes++;
+                    }
+                    last_timer_count = timer_count;
+                }
+            }
+        }
+
+        if (scheduler_flags.debug_100ms) {
+            float vofa_channels[9] = {
+                encoder_duty,
+                encoder.position,
+                encoder.valid ? 1.0F : 0.0F,
+                math_absf(traveled_revolutions),
+                test_command_hz,
+                test_timed_out ? 3.0F : (test_done ? 2.0F : (encoder_started ? 1.0F : 0.0F)),
+                DL_TimerG_isRunning(PWM_STEP_PITCH_INST) ? 1.0F : 0.0F,
+                (float) timer_count_changes,
+                0.001F * (float) DL_TimerG_getLoadValue(PWM_STEP_PITCH_INST),
+            };
+
+            proto_vofa_firewater_send(vofa_channels, 9U);
+            bsp_uart_debug_printf("lead screw turns=%.3f/%.1f pos=%ld/1000 cmd=%.0fHz run=%u ctrchg=%u load=%lu%s\r\n",
+                math_absf(traveled_revolutions),
+                target_revolutions,
+                (long) (encoder.position * 1000.0F),
+                test_command_hz,
+                DL_TimerG_isRunning(PWM_STEP_PITCH_INST) ? 1U : 0U,
+                (unsigned) timer_count_changes,
+                (unsigned long) DL_TimerG_getLoadValue(PWM_STEP_PITCH_INST),
+                test_done ? " done" : "");
+            timer_count_changes = 0U;
         }
     }
 }
@@ -618,7 +918,7 @@ static void bringup_test_init(bringup_test_context_t *ctx)
     }
 
     if (ctx->imu_probe_ok) {
-        ctx->imu_ready = (mpu9250_init(&ctx->imu, 0x68U) == STATUS_OK);
+        ctx->imu_ready = (mpu9250_init(&ctx->imu) == STATUS_OK);
         if (ctx->imu_ready) {
             ctx->imu_ready = (mpu9250_read_who_am_i(&ctx->imu, &ctx->imu_who_am_i) == STATUS_OK);
         }

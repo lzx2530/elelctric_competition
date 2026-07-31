@@ -6,7 +6,10 @@
 typedef struct {
     float min_duty;
     float max_duty;
+    float multi_turn_position;
     float position;
+    float last_position;
+    bool position_initialized;
     bool valid;
 } abs_position_handle_t;
 

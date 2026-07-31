@@ -17,11 +17,22 @@ static uint8_t g_debug_rx_ring_storage[DEBUG_RX_RINGBUF_SIZE];
 static ringbuf_t g_debug_rx_ringbuf;
 static uint8_t g_k230_ring_storage[K230_RINGBUF_SIZE];
 static ringbuf_t g_k230_ringbuf;
+static volatile uint32_t g_k230_rx_byte_count;
+static volatile uint32_t g_k230_rx_drop_count;
+static volatile uint32_t g_k230_rx_error_count;
 
-static void bsp_uart_service_rx_fifo(UART_Regs *uart, ringbuf_t *ringbuf)
+static void bsp_uart_service_rx_fifo(UART_Regs *uart, ringbuf_t *ringbuf,
+    volatile uint32_t *byte_count, volatile uint32_t *drop_count)
 {
     while (!DL_UART_Main_isRXFIFOEmpty(uart)) {
-        (void) ringbuf_push_byte(ringbuf, DL_UART_Main_receiveData(uart));
+        uint8_t byte = DL_UART_Main_receiveData(uart);
+
+        if (byte_count != NULL) {
+            (*byte_count)++;
+        }
+        if (!ringbuf_push_byte(ringbuf, byte) && drop_count != NULL) {
+            (*drop_count)++;
+        }
     }
 }
 
@@ -61,6 +72,9 @@ void bsp_uart_init(void)
 {
     ringbuf_init(&g_debug_rx_ringbuf, g_debug_rx_ring_storage, DEBUG_RX_RINGBUF_SIZE);
     ringbuf_init(&g_k230_ringbuf, g_k230_ring_storage, K230_RINGBUF_SIZE);
+    g_k230_rx_byte_count = 0U;
+    g_k230_rx_drop_count = 0U;
+    g_k230_rx_error_count = 0U;
 }
 
 void bsp_uart_enable_irqs(void)
@@ -129,6 +143,20 @@ ringbuf_t *bsp_uart_get_debug_ringbuf(void)
     return &g_debug_rx_ringbuf;
 }
 
+void bsp_uart_get_k230_rx_diagnostics(uint32_t *byte_count, uint32_t *drop_count,
+    uint32_t *error_count)
+{
+    if (byte_count != NULL) {
+        *byte_count = g_k230_rx_byte_count;
+    }
+    if (drop_count != NULL) {
+        *drop_count = g_k230_rx_drop_count;
+    }
+    if (error_count != NULL) {
+        *error_count = g_k230_rx_error_count;
+    }
+}
+
 void bsp_uart_debug_irq_handler(void)
 {
     uint32_t iidx;
@@ -144,12 +172,12 @@ void bsp_uart_debug_irq_handler(void)
             if (iidx == (uint32_t) DL_UART_MAIN_IIDX_RX_TIMEOUT_ERROR) {
                 bsp_uart_clear_error_interrupt(UART_DEBUG_INST, iidx);
             }
-            bsp_uart_service_rx_fifo(UART_DEBUG_INST, &g_debug_rx_ringbuf);
+            bsp_uart_service_rx_fifo(UART_DEBUG_INST, &g_debug_rx_ringbuf, NULL, NULL);
             continue;
         }
 
         bsp_uart_clear_error_interrupt(UART_DEBUG_INST, iidx);
-        bsp_uart_service_rx_fifo(UART_DEBUG_INST, &g_debug_rx_ringbuf);
+        bsp_uart_service_rx_fifo(UART_DEBUG_INST, &g_debug_rx_ringbuf, NULL, NULL);
     }
 }
 
@@ -169,11 +197,14 @@ void bsp_uart_k230_irq_handler(void)
                 bsp_uart_clear_error_interrupt(UART_K230_INST, iidx);
             }
             /* IRQ only stages bytes into the ring buffer; frame parsing stays in the main loop. */
-            bsp_uart_service_rx_fifo(UART_K230_INST, &g_k230_ringbuf);
+            bsp_uart_service_rx_fifo(UART_K230_INST, &g_k230_ringbuf,
+                &g_k230_rx_byte_count, &g_k230_rx_drop_count);
             continue;
         }
 
+        g_k230_rx_error_count++;
         bsp_uart_clear_error_interrupt(UART_K230_INST, iidx);
-        bsp_uart_service_rx_fifo(UART_K230_INST, &g_k230_ringbuf);
+        bsp_uart_service_rx_fifo(UART_K230_INST, &g_k230_ringbuf,
+            &g_k230_rx_byte_count, &g_k230_rx_drop_count);
     }
 }

@@ -5,9 +5,15 @@
 
 #define MOTOR_PWM_PERIOD_COUNTS    (3200U)
 #define STEP_PWM_MIN_COUNTS        (64U)
-#define TIMER_CLOCK_HZ             (32000000.0f)
+#define STEP_PITCH_TIMER_CLOCK_HZ  (2000000.0f)
 
 static float g_step_frequency_hz[1];
+
+static const DL_TimerG_ClockConfig g_step_pitch_clock_config = {
+    .clockSel = DL_TIMER_CLOCK_BUSCLK,
+    .divideRatio = DL_TIMER_CLOCK_DIVIDE_8,
+    .prescale = 1U,
+};
 
 static void bsp_pwm_set_motor_compare(GPTIMER_Regs *inst, DL_TIMER_CC_INDEX cc_index, uint32_t compare)
 {
@@ -33,6 +39,9 @@ static void bsp_pwm_set_step_counts_pitch(uint32_t period_counts)
 void bsp_pwm_init(void)
 {
     g_step_frequency_hz[BSP_STEPPER_AXIS_PITCH] = 0.0f;
+    DL_TimerG_stopCounter(PWM_STEP_PITCH_INST);
+    DL_TimerG_setClockConfig(PWM_STEP_PITCH_INST,
+        (DL_TimerG_ClockConfig *) &g_step_pitch_clock_config);
     bsp_pwm_set_motor_bridge(BSP_MOTOR_PWM_LEFT, 0.0f, 0.0f);
     bsp_pwm_set_motor_bridge(BSP_MOTOR_PWM_RIGHT, 0.0f, 0.0f);
     bsp_pwm_stop_step(BSP_STEPPER_AXIS_PITCH);
@@ -73,6 +82,7 @@ void bsp_pwm_set_motor_duty(bsp_motor_pwm_t motor, float duty)
 void bsp_pwm_set_step_frequency(bsp_stepper_axis_t axis, float frequency_hz)
 {
     uint32_t period_counts;
+    bool was_stopped;
 
     if (frequency_hz <= 0.0f) {
         bsp_pwm_stop_step(axis);
@@ -80,16 +90,21 @@ void bsp_pwm_set_step_frequency(bsp_stepper_axis_t axis, float frequency_hz)
     }
 
     /* 通过改 period 直接改 STEP 频率，方向交给 GPIO 管。 */
-    period_counts = (uint32_t) (TIMER_CLOCK_HZ / frequency_hz);
+    period_counts = (uint32_t) (STEP_PITCH_TIMER_CLOCK_HZ / frequency_hz);
     if (period_counts < STEP_PWM_MIN_COUNTS) {
         period_counts = STEP_PWM_MIN_COUNTS;
     }
 
+    was_stopped = g_step_frequency_hz[axis] <= 0.0f;
+
     switch (axis) {
         case BSP_STEPPER_AXIS_PITCH:
             bsp_pwm_set_step_counts_pitch(period_counts);
+            if (was_stopped) {
+                DL_TimerG_setTimerCount(PWM_STEP_PITCH_INST, period_counts - 1U);
+            }
             DL_TimerG_startCounter(PWM_STEP_PITCH_INST);
-            g_step_frequency_hz[axis] = TIMER_CLOCK_HZ / (float) period_counts;
+            g_step_frequency_hz[axis] = STEP_PITCH_TIMER_CLOCK_HZ / (float) period_counts;
             break;
         default:
             break;

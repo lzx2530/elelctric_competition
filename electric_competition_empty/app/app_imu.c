@@ -58,7 +58,7 @@ void app_imu_task(void)
     if (g_imu.accel_bias_samples < 100U) {
         float samples = (float) g_imu.accel_bias_samples;
         g_imu.longitudinal_accel_bias_g =
-            (g_imu.longitudinal_accel_bias_g * samples + g_imu.imu.accel_g.x) /
+            (g_imu.longitudinal_accel_bias_g * samples - g_imu.imu.accel_g.y) /
             (samples + 1.0F);
         g_imu.accel_bias_samples++;
     }
@@ -67,9 +67,12 @@ void app_imu_task(void)
     g_imu.snapshot.pitch_deg = g_imu.fusion.pitch_deg;
     g_imu.snapshot.yaw_deg = g_imu.fusion.yaw_deg;
     g_imu.snapshot.gyro_z_dps = g_imu.imu.gyro_dps.z;
+    g_imu.snapshot.accel_x_g = g_imu.imu.accel_g.x;
+    g_imu.snapshot.accel_y_g = g_imu.imu.accel_g.y;
+    g_imu.snapshot.accel_z_g = g_imu.imu.accel_g.z;
     g_imu.snapshot.longitudinal_accel_mps2 = lpf1_update(
         &g_imu.longitudinal_accel_filter,
-        (g_imu.imu.accel_g.x - g_imu.longitudinal_accel_bias_g) * 9.80665F);
+        (-g_imu.imu.accel_g.y - g_imu.longitudinal_accel_bias_g) * 9.80665F);
 }
 
 const imu_snapshot_t *app_imu_get_snapshot(void)

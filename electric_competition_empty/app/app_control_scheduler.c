@@ -11,6 +11,8 @@ typedef struct {
     volatile bool debug_100ms;
 } scheduler_state_t;
 
+#define APP_CONTROL_OLED_PERIOD_MS    (500U)
+
 static scheduler_state_t g_scheduler;
 
 void app_control_scheduler_init(void)
@@ -39,7 +41,7 @@ void app_control_scheduler_on_tick_isr(void)
     if ((g_scheduler.tick_ms % 10U) == 0U) {
         g_scheduler.imu_10ms = true;
     }
-    if ((g_scheduler.tick_ms % 100U) == 0U) {
+    if ((g_scheduler.tick_ms % APP_CONTROL_OLED_PERIOD_MS) == 0U) {
         g_scheduler.oled_50ms = true;
     }
     if ((g_scheduler.tick_ms % 100U) == 0U) {
