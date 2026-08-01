@@ -71,7 +71,7 @@ typedef enum {
     APP_RUN_MODE_ACTUATOR_RESPONSE_TEST = 6,
 } app_run_mode_t;
 
-#define APP_ENABLE_OLED_UI       (0U)
+#define APP_ENABLE_OLED_UI       (1U)
 #define APP_ENABLE_VOFA_STREAM   (0U)
 #define APP_ENABLE_TEXT_DEBUG    (0U)
 
@@ -321,6 +321,9 @@ static void run_vehicle_app(bool line_tracking_test)
             app_ui_refresh(app_chassis_get_snapshot(), app_ball_control_get_snapshot(),
                 app_mission_get_snapshot());
         }
+#if APP_ENABLE_OLED_UI
+        app_ui_process();
+#endif
         if (scheduler_flags.debug_100ms) {
 #if APP_ENABLE_TEXT_DEBUG
             const mission_snapshot_t *mission = app_mission_get_snapshot();

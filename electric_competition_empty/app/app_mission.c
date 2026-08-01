@@ -9,8 +9,9 @@
 #define APP_MISSION_STATIC_LIMIT_MS            (5000U)
 #define APP_MISSION_LINE_LIMIT_MS              (20000U)
 #define APP_MISSION_BALANCE_LIMIT_MS           (30000U)
+#define APP_MISSION_LINE_STOP_DISTANCE_MM      (6090.0F)
 #define APP_MISSION_LINE_CRUISE_SPEED_MPS      (1.53F)
-#define APP_MISSION_STOP_BRAKE_DURATION_S      (0.12F)
+#define APP_MISSION_STOP_BRAKE_DURATION_S      (0.16F)
 
 typedef struct {
     mission_snapshot_t snapshot;
@@ -171,7 +172,9 @@ void app_mission_task(const imu_snapshot_t *imu, uint32_t tick_ms)
         return;
     }
 
-    if (g_mission.snapshot.mode == APP_MISSION_LINE_LOOP && chassis->start_line_detected) {
+    if (g_mission.snapshot.mode == APP_MISSION_LINE_LOOP &&
+        ((chassis->travel_mm >= APP_MISSION_LINE_STOP_DISTANCE_MM) ||
+            chassis->start_line_detected)) {
         mission_finish_with_brake();
         g_mission.snapshot.state = APP_MISSION_FINISHED;
         return;

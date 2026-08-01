@@ -23,6 +23,7 @@
 #define APP_CHASSIS_CURVE_SPEED_SLOWDOWN_ALPHA  (0.35F)
 #define APP_CHASSIS_LINE_SAMPLE_PERIOD_S        (0.005F)
 #define APP_CHASSIS_MAX_BRAKE_DURATION_S        (0.20F)
+#define APP_CHASSIS_LINE_MARK_BRAKE_DURATION_S  (0.20F)
 #define APP_CHASSIS_LINE_ERROR_FILTER_ALPHA     (0.30F)
 #define APP_CHASSIS_LINE_RATE_FILTER_ALPHA      (0.15F)
 #define APP_CHASSIS_LINE_PREDICTION_HORIZON_S   (0.028F)
@@ -270,6 +271,7 @@ void app_chassis_line_task(void)
             }
             if (g_chassis.center_mark_count >= 2U) {
                 g_chassis.start_line_latched = true;
+                app_chassis_brake(APP_CHASSIS_LINE_MARK_BRAKE_DURATION_S);
             }
         }
     } else {

@@ -9,6 +9,15 @@
 #define BSP_SPI_IMU_TIMEOUT_LOOPS (5000U)
 #define BSP_SPI_IMU_CLOCK_DIVIDER (15U)
 
+typedef struct {
+    const uint8_t *data;
+    uint16_t length;
+    uint16_t written;
+    bool active;
+} bsp_i2c_async_write_t;
+
+static bsp_i2c_async_write_t g_i2c_async_write;
+
 static status_t bsp_i2c_wait_idle(void)
 {
     uint32_t timeout = BSP_I2C_TIMEOUT_LOOPS;
@@ -47,6 +56,10 @@ static status_t bsp_i2c_write_raw(uint8_t dev_addr, const uint8_t *data, uint16_
 {
     status_t ret;
     uint16_t written;
+
+    if (g_i2c_async_write.active) {
+        return STATUS_BUSY;
+    }
 
     ret = bsp_i2c_wait_idle();
     if (ret != STATUS_OK) {
@@ -100,6 +113,58 @@ status_t bsp_i2c_write_bytes(uint8_t dev_addr, const uint8_t *data, uint16_t len
     }
 
     return bsp_i2c_write_raw(dev_addr, data, length);
+}
+
+status_t bsp_i2c_async_start_write(uint8_t dev_addr, const uint8_t *data, uint16_t length)
+{
+    if ((data == NULL) || (length == 0U)) {
+        return STATUS_INVALID_ARG;
+    }
+    if (g_i2c_async_write.active ||
+        ((DL_I2C_getControllerStatus(I2C_SENSOR_BUS_INST) & DL_I2C_CONTROLLER_STATUS_IDLE) == 0U)) {
+        return STATUS_BUSY;
+    }
+
+    g_i2c_async_write.data = data;
+    g_i2c_async_write.length = length;
+    g_i2c_async_write.written = DL_I2C_fillControllerTXFIFO(I2C_SENSOR_BUS_INST,
+        (uint8_t *) data, length);
+    g_i2c_async_write.active = true;
+    DL_I2C_startControllerTransfer(I2C_SENSOR_BUS_INST, dev_addr, DL_I2C_CONTROLLER_DIRECTION_TX,
+        length);
+    return STATUS_OK;
+}
+
+status_t bsp_i2c_async_poll_write(void)
+{
+    uint32_t status;
+
+    if (!g_i2c_async_write.active) {
+        return STATUS_NOT_READY;
+    }
+
+    status = DL_I2C_getControllerStatus(I2C_SENSOR_BUS_INST);
+    if ((status & DL_I2C_CONTROLLER_STATUS_ERROR) != 0U) {
+        g_i2c_async_write.active = false;
+        return STATUS_ERROR;
+    }
+    if ((g_i2c_async_write.written < g_i2c_async_write.length) &&
+        !DL_I2C_isControllerTXFIFOFull(I2C_SENSOR_BUS_INST)) {
+        g_i2c_async_write.written += DL_I2C_fillControllerTXFIFO(I2C_SENSOR_BUS_INST,
+            (uint8_t *) &g_i2c_async_write.data[g_i2c_async_write.written],
+            (uint16_t) (g_i2c_async_write.length - g_i2c_async_write.written));
+    }
+    if ((status & DL_I2C_CONTROLLER_STATUS_BUSY_BUS) != 0U) {
+        return STATUS_BUSY;
+    }
+
+    g_i2c_async_write.active = false;
+    return STATUS_OK;
+}
+
+bool bsp_i2c_async_write_active(void)
+{
+    return g_i2c_async_write.active;
 }
 
 status_t bsp_i2c_mem_write(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *data, uint16_t length)

@@ -91,6 +91,13 @@ void app_ui_init(void)
     g_oled_ready = (oled_init(&g_oled, 0x3CU) == STATUS_OK);
 }
 
+void app_ui_process(void)
+{
+    if (g_oled_ready && oled_flush_async_active(&g_oled)) {
+        (void) oled_flush_async_process(&g_oled);
+    }
+}
+
 void app_ui_refresh(const chassis_snapshot_t *chassis,
     const ball_control_snapshot_t *ball,
     const mission_snapshot_t *mission)
@@ -101,7 +108,7 @@ void app_ui_refresh(const chassis_snapshot_t *chassis,
 
     (void) chassis;
     (void) ball;
-    if (!g_oled_ready) {
+    if (!g_oled_ready || oled_flush_async_active(&g_oled)) {
         return;
     }
 
@@ -112,5 +119,5 @@ void app_ui_refresh(const chassis_snapshot_t *chassis,
     oled_clear(&g_oled);
     oled_printf(&g_oled, 46U, 5U, "TASK %u", mission->mode);
     app_ui_draw_big_time(minutes, seconds);
-    (void) oled_flush(&g_oled);
+    (void) oled_flush_async_begin(&g_oled);
 }

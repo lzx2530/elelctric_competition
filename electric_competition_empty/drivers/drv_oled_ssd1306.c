@@ -57,6 +57,11 @@ static status_t g_oled_last_status = STATUS_OK;
 static uint8_t g_oled_last_failed_command = 0U;
 static uint8_t g_oled_last_failed_index = 0U;
 
+#define OLED_ASYNC_STATE_COMMAND (0U)
+#define OLED_ASYNC_STATE_DATA    (1U)
+#define OLED_ASYNC_STATE_COMPLETE (2U)
+#define OLED_ASYNC_DATA_BYTES    (16U)
+
 static status_t oled_send_command(oled_handle_t *handle, uint8_t command)
 {
     uint8_t packet[2] = {0x00, command};
@@ -207,6 +212,89 @@ status_t oled_flush_pages(oled_handle_t *handle, uint8_t first_page, uint8_t pag
         handle->dirty = false;
     }
     return STATUS_OK;
+}
+
+status_t oled_flush_async_begin(oled_handle_t *handle)
+{
+    if (handle == NULL) {
+        return STATUS_INVALID_ARG;
+    }
+    if (handle->async_flush_active || bsp_i2c_async_write_active()) {
+        return STATUS_BUSY;
+    }
+    if (!handle->dirty) {
+        return STATUS_OK;
+    }
+
+    handle->async_page = 0U;
+    handle->async_column = 0U;
+    handle->async_state = OLED_ASYNC_STATE_COMMAND;
+    handle->async_flush_active = true;
+    return STATUS_OK;
+}
+
+status_t oled_flush_async_process(oled_handle_t *handle)
+{
+    status_t status;
+
+    if ((handle == NULL) || !handle->async_flush_active) {
+        return STATUS_NOT_READY;
+    }
+
+    if (bsp_i2c_async_write_active()) {
+        status = bsp_i2c_async_poll_write();
+        if (status == STATUS_BUSY) {
+            return STATUS_BUSY;
+        }
+        if (status != STATUS_OK) {
+            handle->async_flush_active = false;
+            g_oled_last_status = status;
+            return status;
+        }
+    }
+
+    if (handle->async_state == OLED_ASYNC_STATE_COMPLETE) {
+        handle->async_flush_active = false;
+        handle->dirty = false;
+        return STATUS_OK;
+    }
+
+    if (handle->async_state == OLED_ASYNC_STATE_COMMAND) {
+        handle->async_tx[0] = 0x00U;
+        handle->async_tx[1] = (uint8_t) (0xB0U + handle->async_page);
+        handle->async_tx[2] = 0x00U;
+        handle->async_tx[3] = 0x10U;
+        status = bsp_i2c_async_start_write(handle->i2c_addr, handle->async_tx, 4U);
+        if (status == STATUS_OK) {
+            handle->async_state = OLED_ASYNC_STATE_DATA;
+        }
+        return status;
+    }
+
+    handle->async_tx[0] = 0x40U;
+    memcpy(&handle->async_tx[1], &handle->buffer[(uint16_t) handle->async_page * SSD1306_WIDTH +
+        handle->async_column], OLED_ASYNC_DATA_BYTES);
+    status = bsp_i2c_async_start_write(handle->i2c_addr, handle->async_tx,
+        OLED_ASYNC_DATA_BYTES + 1U);
+    if (status != STATUS_OK) {
+        return status;
+    }
+
+    handle->async_column += OLED_ASYNC_DATA_BYTES;
+    if (handle->async_column >= SSD1306_WIDTH) {
+        handle->async_column = 0U;
+        handle->async_page++;
+        handle->async_state = OLED_ASYNC_STATE_COMMAND;
+        if (handle->async_page >= (SSD1306_HEIGHT / 8U)) {
+            handle->async_state = OLED_ASYNC_STATE_COMPLETE;
+        }
+    }
+    return STATUS_BUSY;
+}
+
+bool oled_flush_async_active(const oled_handle_t *handle)
+{
+    return (handle != NULL) && handle->async_flush_active;
 }
 
 status_t oled_get_last_status(void)
